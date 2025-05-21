@@ -8,7 +8,10 @@ A command-line utility for converting between bytearray/felts and strings for St
 import sys
 import argparse
 import re
-
+""" USAGE::python3 b_convert.py --mode felt2str --input "[0x2, 0x68747470733a2f2f697066732e696f2f69706673
+2f516d646e323837666757, 0x387367456a64476a5858426258786846585a67383861657043717033386d36, 0x6551623539, 0x5]"
+# Example output:
+https://ipfs.io/ipfs/Qmdn287fgW8sgEjdGjXXBbXxhFXZg88aepCqp38m6eQb59 """
 
 def felt_to_string(felt):
     """Convert a StarkNet felt to a string"""

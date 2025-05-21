@@ -1,5 +1,13 @@
+#artifacts
 target
 .snfoundry_cache/
 snfoundry_trace/
 coverage/
 profile/
+
+#Integration helpers
+.last_declared_local.json
+.last_declared_sepolia.json
+.last_deployed_local_contract.json
+.last_deployed_sepolia_contract.json
+
