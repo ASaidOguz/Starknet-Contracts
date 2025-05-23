@@ -27,8 +27,8 @@ pub mod Erc721Nft{
     // Exposing entry points
     #[abi(embed_v0)]
     impl OwnableImpl = OwnableComponent::OwnableImpl<ContractState>;
-    #[abi(embed_v0)]
-    impl CounterImpl = CounterComponent::CounterImpl<ContractState>;
+    //#[abi(embed_v0)]
+    impl CounterImpl = CounterComponent::CounterImpl<ContractState>; 
     #[abi(embed_v0)]
     impl ERC721Impl= ERC721Component::ERC721Impl<ContractState>;
     #[abi(embed_v0)]

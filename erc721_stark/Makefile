@@ -67,30 +67,57 @@ deploy_sepolia_account:
 	sncast account deploy --network sepolia --name sepolia
 
 declare_local:
-	sncast --profile=devnet declare --contract-name=$(CONTRACT_NAME)
+	@echo "Declaring $(CONTRACT_NAME)..."
+	@sncast --profile=devnet declare --contract-name=$(CONTRACT_NAME) > tmp_declare_output.txt; \
+	class_hash=$$(grep -o 'class_hash: 0x[0-9a-fA-F]*' tmp_declare_output.txt | cut -d ' ' -f2); \
+	timestamp=$$(date +%s); \
+	echo "{\"class_hash\": \"$$class_hash\", \"contract_name\": \"$(CONTRACT_NAME)\", \"timestamp\": $$timestamp}" > .last_declared_local.json; \
+	echo "Saved class hash: $$class_hash"; \
+	rm tmp_declare_output.txt
 
 declare_sepolia:
-	sncast --account=sepolia declare --contract-name=$(CONTRACT_NAME) --network=sepolia
+	@echo "Declaring $(CONTRACT_NAME)..."
+	@sncast --account=sepolia declare --contract-name=$(CONTRACT_NAME) --network sepolia > tmp_declare_output.txt; \
+	class_hash=$$(grep -o 'class_hash: 0x[0-9a-fA-F]*' tmp_declare_output.txt | cut -d ' ' -f2); \
+	timestamp=$$(date +%s); \
+	echo "{\"class_hash\": \"$$class_hash\", \"contract_name\": \"$(CONTRACT_NAME)\", \"timestamp\": $$timestamp}" > .last_declared_sepolia.json; \
+	echo "Saved class hash: $$class_hash"; \
+	rm tmp_declare_output.txt
 
 deploy_contract:
-	sncast --profile=devnet deploy --class-hash=$(CLASS_HASH) --salt=0 --constructor-calldata=$(OWNER)
+	$(eval CLASS_HASH := $(shell jq -r '.class_hash' .last_declared_local.json))
+	@output=$$(sncast --profile=devnet deploy \
+		--class-hash=$(CLASS_HASH) \
+		--salt=5 \
+		--constructor-calldata $(OWNER)) \
+	contract_address=$$(echo "$$output" | grep "contract_address:" | awk '{print $$2}'); \
+	transaction_hash=$$(echo "$$output" | grep "transaction_hash:" | awk '{print $$2}'); \
+	timestamp=$$(date +%s); \
+	echo "{\"contract_address\": \"$$contract_address\", \"transaction_hash\": \"$$transaction_hash\", \"timestamp\": $$timestamp}" > .last_deployed_local_contract.json; \
+	echo "$$output"
+
 
 deploy_contract_sepolia:
-	sncast --account=sepolia deploy --class-hash=$(CLASS_HASH) --network sepolia --constructor-calldata=$(OWNER)
+	$(eval CLASS_HASH := $(shell jq -r '.class_hash' .last_declared_sepolia.json))
+	@output=$$(sncast --account=sepolia deploy \
+		--network sepolia \
+		--class-hash=$(CLASS_HASH) \
+		--salt=5 \
+		--constructor-calldata $(OWNER)) \
+	contract_address=$$(echo "$$output" | grep "contract_address:" | awk '{print $$2}'); \
+	transaction_hash=$$(echo "$$output" | grep "transaction_hash:" | awk '{print $$2}'); \
+	timestamp=$$(date +%s); \
+	echo "{\"contract_address\": \"$$contract_address\", \"transaction_hash\": \"$$transaction_hash\", \"timestamp\": $$timestamp}" > .last_deployed_sepolia_contract.json; \
+	echo "$$output"
 
 mint_nft:
-	sncast --profile=devnet invoke --contract-address=$(ADDRESS) --function=$(FUNC) --arguments $(OWNER),'"$(IPFS_HASH)"'
+	$(eval ADDRESS := $(shell jq -r '.contract_address' .last_deployed_local_contract.json))
+	sncast --profile=devnet invoke --contract-address=$(ADDRESS) --function=mint_item --arguments $(OWNER),'"$(IPFS_HASH)"'
 
-invoke_str_sepolia:
-	sncast --account=sepolia invoke --contract-address=$(ADDRESS) --network sepolia --function=$(FUNC) --arguments '$(IPFS_HASH)'
+mint_nft_sepolia:
+	$(eval ADDRESS := $(shell jq -r '.contract_address' .last_deployed_sepolia_contract.json))
+	sncast --account=sepolia invoke --contract-address=$(ADDRESS) --network=sepolia --function=mint_item --arguments $(OWNER),'"$(IPFS_HASH)"'
 
 test:
 	scarb test
 
-# Added missing rule from your help text
-invoke_string_arg:
-	sncast --profile=devnet invoke --contract-address=$(ADDRESS) --function=$(FUNC) --calldata=$(CALLDATA)
-
-# Added missing rule from your help text
-call_string_arg:
-	sncast --profile=devnet call --contract-address=$(ADDRESS) --function=$(FUNC)
