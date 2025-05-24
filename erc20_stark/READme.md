@@ -9,7 +9,7 @@ Then just clone repository by
 git clone https://github.com/ASaidOguz/Starknet-Contracts
 ```
 
-move into nft project 
+move into erc20 project 
 ```
 cd Starknet-Contracts/erc20_stark
 ```
