@@ -127,3 +127,7 @@ endif
 		--contract-address=$(ADDRESS) \
 		--function=mint \
 		--calldata $(RECIPIENT) $(AMOUNT_LOW) $(AMOUNT_HIGH)
+
+test:
+	@echo "Running tests..."
+	scarb test

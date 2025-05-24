@@ -48,3 +48,8 @@ compilation's always start from lib.cairo so just simply set your mock contract 
 add as "pub mod Mock" so scarb can understand and compile and create artifact for your mocks.
 Then use it in tests with declare funtion easily.
 
+Smoll info -> 🔍 Introspection(SRC%5) is all about using a view function to detect capabilities — without spending gas or making state changes.
+
+
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
