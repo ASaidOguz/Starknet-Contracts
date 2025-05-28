@@ -7,6 +7,12 @@ use erc721_stark::Erc721Nft::IErc721NftDispatcher;
 use erc721_stark::Erc721Nft::IErc721NftDispatcherTrait;
 use core::traits::TryInto;
 
+// ADD THESE IMPORTS for your counter reader dispatcher
+use erc721_stark::Erc721Nft::ICounterReaderDispatcher;
+use erc721_stark::Erc721Nft::ICounterReaderDispatcherTrait;
+
+use erc721_stark::components::Counter;
+
 
 // OpenZeppelin ERC721 interfaces and their dispatchers
 use openzeppelin_token::erc721::interface::IERC721Dispatcher;
@@ -65,6 +71,19 @@ fn test_deploy_mint(){
     let nft_id=contract.mint_item(ALICE,ipfs_hash );
     // Check if the minting was successful
     assert_eq!(nft_id, 1);  
+    let counter_reader:ICounterReaderDispatcher = ICounterReaderDispatcher{
+        contract_address: contract.contract_address,
+    };
+    assert_eq!(counter_reader.get_current_token_id(), 1);
+}
+
+#[test]
+fn test_token_uri(){
+    let contract = deploy(OWNER);
+    let ipfs_hash:ByteArray="QmVsC32PYDe1cM9zoA8JMninKjeFmHB4xRXi1As2vrv5or";
+    let nft_id=contract.mint_item(ALICE,ipfs_hash );
+    // Check if the minting was successful
+    assert_eq!(nft_id, 1); 
 }
 
 #[test]

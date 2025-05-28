@@ -6,11 +6,9 @@ pub trait IErc20TL<TState>{
 
 use starknet::ContractAddress;
 #[starknet::contract]
-mod Erc20TL {
+pub mod Erc20TL {
     use openzeppelin_token::erc20::{ERC20Component, ERC20HooksEmptyImpl};
     use openzeppelin_access::ownable::OwnableComponent;
-   
-    
     use super::*;
 
     component!(path: ERC20Component, storage: erc20, event: ERC20Event);

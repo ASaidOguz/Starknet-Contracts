@@ -3,7 +3,7 @@ target
 snfoundry_trace/
 coverage/
 profile/
-
+coverage_report
 #Integration helpers
 .last_declared_local.json
 .last_declared_sepolia.json

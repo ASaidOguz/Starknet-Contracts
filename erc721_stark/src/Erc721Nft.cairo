@@ -4,10 +4,15 @@ use starknet::ContractAddress;
 pub trait IErc721Nft<TState>{
     fn mint_item(ref self:TState,recipient:ContractAddress, uri: ByteArray) -> u256;
 }
+#[starknet::interface]    // testing purposes... 
+pub trait ICounterReader<TState> {
+    fn get_current_token_id(self: @TState) -> u256;
+}
 
 #[starknet::contract]
 pub mod Erc721Nft{
-    use erc721_stark::components::Counter::CounterComponent;
+    use super::ICounterReader;
+use erc721_stark::components::Counter::CounterComponent;
     use openzeppelin_access::ownable::OwnableComponent;
     use openzeppelin_introspection::src5::SRC5Component;
     use openzeppelin_token::erc721::ERC721Component;
@@ -91,6 +96,15 @@ pub mod Erc721Nft{
             self.erc721.mint(recipient, token_id); // Todo: use `safe_mint instead of mint
             self.set_token_uri(token_id, uri);
             token_id
+        }
+    }
+
+    // Secure read-only wrapper for counter functionality -> purpose::counter component testing
+    #[abi(embed_v0)]
+    pub impl CounterReaderImpl of ICounterReader<ContractState> {
+        /// Returns the current token ID (last minted token ID)
+        fn get_current_token_id(self: @ContractState) -> u256 {
+            self.token_id_counter.current()
         }
     }
 

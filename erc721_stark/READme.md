@@ -22,6 +22,20 @@ scarb build
 
 Everything you need to declare-deploy-interaction and  testing resides in Makefile.
 
+For coverage reports 
+
+```
+genhtml -o coverage_report coverage/coverage.lcov
+```
+
+
+
+
+
+
+
+
+
 
 
 Current contract's (Erc721 example taken from Speedrun starknet)

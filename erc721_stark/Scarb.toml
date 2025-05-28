@@ -28,7 +28,7 @@ allow-prebuilt-plugins = ["snforge_std"]
 
 [tool.fmt]
 sort-module-level-items = true
-
+# This part added for coverage report generating.(lcov file)
 [profile.dev.cairo]
 unstable-add-statements-functions-debug-info = true
 unstable-add-statements-code-locations-debug-info = true
