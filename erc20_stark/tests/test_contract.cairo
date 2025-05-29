@@ -54,11 +54,11 @@ fn setup() ->(ERC20ComponentState, OwnableComponentState) {
     (erc20_state, ownable_state)
 }
 #[test]
-fn test_components(){
-let (erc20_state,ownable_state)=setup();
-assert_eq!(erc20_state.name(), "Erc20TL", "Name mismatch in ERC20 component");
-assert_eq!(erc20_state.symbol(), "ETL", "Symbol mismatch in ERC20 component");
-assert_eq!(ownable_state.owner(), OWNER, "Owner mismatch in Ownable component");
+   fn test_components(){
+   let (erc20_state,ownable_state)=setup();
+   assert_eq!(erc20_state.name(), "Erc20TL", "Name mismatch in ERC20 component");
+   assert_eq!(erc20_state.symbol(), "ETL", "Symbol mismatch in ERC20 component");
+   assert_eq!(ownable_state.owner(), OWNER, "Owner mismatch in Ownable component");
 }
 
 

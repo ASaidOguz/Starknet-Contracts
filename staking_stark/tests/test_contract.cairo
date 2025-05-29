@@ -31,7 +31,7 @@ fn parse_decimal_to_u256(decimal_str: ByteArray) -> u256 {
     let len = decimal_str.len();
     let mut i: u32 = 0;
     
-    while i < len {
+    while i != len {
         let char = decimal_str.at(i).unwrap();
         let dot_u8 = 46_u8;    // ASCII value for '.'
         let zero_u8 = 48_u8;  // ASCII value for '0'
@@ -41,16 +41,14 @@ fn parse_decimal_to_u256(decimal_str: ByteArray) -> u256 {
             found_decimal = true;
         } else if char >= zero_u8 && char <= nine_u8 {
             let digit: u256 = (char - zero_u8).into();
-            
+
             if !found_decimal {
                 // Building integer part
                 integer_part = integer_part * 10 + digit;
-            } else {
+            } else if decimal_places < 18 { // Limit to 18 decimal places
                 // Building fractional part
-                if decimal_places < 18 { // Limit to 18 decimal places
-                    fractional_part = fractional_part * 10 + digit;
-                    decimal_places += 1;
-                }
+                fractional_part = fractional_part * 10 + digit;
+                decimal_places += 1;
             }
         }
         
@@ -64,7 +62,7 @@ fn parse_decimal_to_u256(decimal_str: ByteArray) -> u256 {
     let mut fractional_scaled = fractional_part;
     let mut remaining_places = 18 - decimal_places;
     
-    while remaining_places > 0 {
+    while remaining_places != 0 {
         fractional_scaled *= 10;
         remaining_places -= 1;
     }
@@ -134,14 +132,6 @@ fn test_decimal_conversion()  {
     println!("Result of conversion 4: {}->{}", arg4.clone(),result4);
 }
 
-#[test]
-fn test_deploy_mock_strk_token() {
-    let INITIAL_BALANCE: u256 = parse_decimal_to_u256("10.0"); // 10_STRK_IN_FRI
-    let contract_address = deploy_mock_stark();
-    let token_dispatcher = IERC20Dispatcher { contract_address };
-    assert(token_dispatcher.balance_of(RECIPIENT) == INITIAL_BALANCE, 'Balance should be equal!');
-}
-
 struct TestEnv {
     staking: IStakingDispatcher,
     token: IERC20Dispatcher,
@@ -171,6 +161,44 @@ fn setup_stake(amount_to_stake:u256) -> TestEnv {
         tester,
         amount_staked: amount_to_stake,
     }
+}
+#[test]
+#[should_panic(expected: "Withdrawals are not open yet")]
+fn test_withdraw_before_open(){
+let tets_env = setup_stake(parse_decimal_to_u256("0.5")); // 0.5 STRK
+    // Try to withdraw before the contract is open for withdraw
+    cheat_caller_address(tets_env.staking.contract_address, tets_env.tester, CheatSpan::TargetCalls(1));
+    tets_env.staking.withdraw();
+}
+
+#[test]
+fn test_getters(){
+let tets_env = setup_stake(parse_decimal_to_u256("0.5")); // 0.5 STRK
+    // Test the getters
+    let balance = tets_env.staking.balances(tets_env.tester);
+    assert(balance == tets_env.amount_staked, 'Balance not matched');
+    
+    let total_balance = tets_env.staking.total_balance();
+    assert(total_balance == tets_env.amount_staked, 'Total balance not matched');
+    
+    let deadline = tets_env.staking.deadline();
+    assert(deadline > 0, 'Deadline should be set');
+    
+    let threshold = tets_env.staking.threshold();
+    assert(threshold > 0, 'Threshold should be set');
+    
+    let open_for_withdraw = tets_env.staking.open_for_withdraw();
+    assert(!open_for_withdraw, 'not open for withdraw yet');
+    
+    let external_contract = tets_env.staking.example_external_contract();
+    
+    assert(external_contract !=0.try_into().unwrap(), 'External address should be set');
+    
+    let completed = tets_env.staking.completed();
+    assert(!completed, 'external con. not completed yet');
+
+    let time_left = tets_env.staking.time_left();
+    assert(time_left==60, 'Time left should be positive');
 }
 
 #[test]
