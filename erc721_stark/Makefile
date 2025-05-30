@@ -74,9 +74,10 @@ declare_sepolia:
 deploy_contract:
 	$(eval CLASS_HASH := $(shell jq -r '.class_hash' .last_declared_local.json))
 	@output=$$(sncast --profile=devnet deploy \
+		--arguments $(OWNER),'"$(NAME)"'\
 		--class-hash=$(CLASS_HASH) \
 		--salt=5 \
-		--constructor-calldata $(OWNER)) \
+		) \
 	contract_address=$$(echo "$$output" | grep "contract_address:" | awk '{print $$2}'); \
 	transaction_hash=$$(echo "$$output" | grep "transaction_hash:" | awk '{print $$2}'); \
 	timestamp=$$(date +%s); \
@@ -87,10 +88,11 @@ deploy_contract:
 deploy_contract_sepolia:
 	$(eval CLASS_HASH := $(shell jq -r '.class_hash' .last_declared_sepolia.json))
 	@output=$$(sncast --account=sepolia deploy \
+		--arguments $(OWNER),'"$(NAME)"' \
 		--network sepolia \
 		--class-hash=$(CLASS_HASH) \
 		--salt=5 \
-		--constructor-calldata $(OWNER)) \
+		) \
 	contract_address=$$(echo "$$output" | grep "contract_address:" | awk '{print $$2}'); \
 	transaction_hash=$$(echo "$$output" | grep "transaction_hash:" | awk '{print $$2}'); \
 	timestamp=$$(date +%s); \
@@ -124,4 +126,6 @@ test_coverage:
 	cp -r $(REPORT_DIR)/* $(PROJECT_REPORT_DIR)/
 	powershell.exe -Command "Start-Process '$(CHROME_PATH)' -ArgumentList '$(WINDOWS_REPORT_DIR)\\index.html'"
 
+coverage_clean:
+	cairo-coverage clean
 

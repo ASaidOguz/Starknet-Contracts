@@ -35,6 +35,7 @@ so while deploying the contructor call data should be like this
 --constructor-calldata 10000000 0 0xYourRecipientAddress
 
 ```
+or use --arguments flag for serialized elements.
 
 After Declare and Deployment makefile will copy the returned values as ;
 

@@ -77,8 +77,8 @@ use erc721_stark::components::Counter::CounterComponent;
     }
 
     #[constructor]
-    fn constructor(ref self:ContractState,owner:ContractAddress){
-        let name :ByteArray ="BestofBleach";
+    fn constructor(ref self:ContractState,owner:ContractAddress,name:ByteArray){
+        let name :ByteArray =name;
         let symbol: ByteArray ="BOB";
         let base_uri:ByteArray = "https://ipfs.io/ipfs/";
 

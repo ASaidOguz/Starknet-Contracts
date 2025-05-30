@@ -2,9 +2,11 @@
 
 use snforge_std::{declare, ContractClassTrait, DeclareResultTrait};
 use core::traits::TryInto;
-use snforge_std::{CheatSpan, cheat_caller_address,test_address};
+use snforge_std::{CheatSpan, cheat_caller_address};
 use starknet::ContractAddress;
 
+use openzeppelin_testing::declare_and_deploy;
+use openzeppelin_utils::serde::SerializedAppend;
 // OpenZeppelin Ownable interface and its dispatcher
 use openzeppelin_access::ownable::interface::IOwnableDispatcher;
 use openzeppelin_access::ownable::interface::IOwnableDispatcherTrait; // You might need this for the `owner()` trait method
@@ -103,45 +105,20 @@ fn deploy() -> IErc20TLDispatcher{
         // Create the amount as a u256
     let amount: u256 = 1_000_000_000_000_000_000_000_0000;
 
-    // Manually extract low and high (felt252) values -> it's neccessary to convert u256 to two felt252 values.
-    let amount_low: felt252 = amount.low.into();
-    let amount_high: felt252 = amount.high.into();
-
-    // Create constructor args as raw felts
-    let constructor_args = array![
-        amount_low,
-        amount_high,
-        OWNER.into()  // assuming OWNER is a valid felt252 or ContractAddress
-    ];
+    let mut constructor_args =array![];
+    constructor_args.append_serde(amount);
+    constructor_args.append_serde(OWNER);
 
     // Deploy the contract
-    let contract = declare("Erc20TL").unwrap().contract_class();
-    let (contract_address, _ ) = contract.deploy(@constructor_args).unwrap();
-
+    let contract_address = declare_and_deploy("Erc20TL", constructor_args);
     // Return dispatcher for contract
     IErc20TLDispatcher { contract_address }
 }
 
 #[test] // added as test attribute to run this function as a test so if this changes coverage???
 fn test_deploy()  {
-    // Create the amount as a u256
-    let amount: u256 = 1_000_000_000_000_000_000_000_0000;
-
-    // Manually extract low and high (felt252) values -> it's neccessary to convert u256 to two felt252 values.
-    let amount_low: felt252 = amount.low.into();
-    let amount_high: felt252 = amount.high.into();
-
-    // Create constructor args as raw felts
-    let constructor_args = array![
-        amount_low,
-        amount_high,
-        OWNER.into()  // assuming OWNER is a valid felt252 or ContractAddress
-    ];
-
-    // Deploy the contract
-    let contract = declare("Erc20TL").unwrap().contract_class();
-    let (contract_address, _ ) = contract.deploy(@constructor_args).unwrap();
-    println!("Contract deployed at: {:?}", contract_address);
+    let contract = deploy();
+    println!("Contract deployed at: {:?}", contract.contract_address);
 
 }
 

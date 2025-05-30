@@ -3,5 +3,3 @@ target
 snfoundry_trace/
 coverage/
 profile/
-coverage_report
-deployments

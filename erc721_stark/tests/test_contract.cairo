@@ -11,7 +11,7 @@ use core::traits::TryInto;
 use erc721_stark::Erc721Nft::ICounterReaderDispatcher;
 use erc721_stark::Erc721Nft::ICounterReaderDispatcherTrait;
 
-use erc721_stark::components::Counter;
+
 
 
 // OpenZeppelin ERC721 interfaces and their dispatchers
@@ -25,8 +25,9 @@ use openzeppelin_token::erc721::extensions::erc721_enumerable::interface::IERC72
 // OpenZeppelin Ownable interface and its dispatcher
 use openzeppelin_access::ownable::interface::IOwnableDispatcher;
 use openzeppelin_access::ownable::interface::IOwnableDispatcherTrait; // You might need this for the `owner()` trait method
-
-
+// Utils functions-> serde does the serialization and deserialization for constructor arguments.
+use openzeppelin_testing::declare_and_deploy;
+use openzeppelin_utils::serde::SerializedAppend;
 
 use snforge_std::{CheatSpan, cheat_caller_address};
 use starknet::ContractAddress;
@@ -38,10 +39,15 @@ const OWNER:ContractAddress= 'OWNER'.try_into().unwrap();
 
 // Declare and deploy the contract and return its dispatcher.
 fn deploy(owner:ContractAddress) -> IErc721NftDispatcher {
-    let constructor_args = array![owner.into()]; 
-    let contract = declare("Erc721Nft").unwrap().contract_class();
-    let (contract_address, _) = contract.deploy(@constructor_args).unwrap();
-
+    let name:ByteArray="BestofBleach";
+    let owner =OWNER;
+    let mut calldata = array![];
+    // need address of mock token and example external contract so lets deploy and extract their addresses
+    calldata.append_serde(owner);
+    calldata.append_serde(name);
+    let contract_address= declare_and_deploy(
+        "Erc721Nft",
+        calldata,);
     // Return the dispatcher.
     // It allows to interact with the contract based on its interface.
     IErc721NftDispatcher { contract_address }

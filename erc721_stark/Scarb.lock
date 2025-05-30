@@ -9,6 +9,7 @@ dependencies = [
  "openzeppelin_introspection",
  "openzeppelin_testing",
  "openzeppelin_token",
+ "openzeppelin_utils",
  "snforge_std",
 ]
 
