@@ -1,0 +1,11 @@
+# Ignore test_contract.cairo
+test_contract.cairo
+
+# Ignore all test files
+test_*.cairo
+
+# Ignore everything in the utils directory
+*/utils/*
+
+# Ignore mock contracts
+MockSTRKToken.cairo
