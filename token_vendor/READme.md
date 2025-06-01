@@ -1,4 +1,4 @@
-## ERC20 STARKNET
+## TOKEN VENDOR
 
 Usage :
 You need to have installed [scarb](https://docs.swmansion.com/scarb/docs.html) and starknet foundry.
@@ -9,9 +9,9 @@ Then just clone repository by
 git clone https://github.com/ASaidOguz/Starknet-Contracts
 ```
 
-move into erc20 project 
+move into token-vendor project 
 ```
-cd Starknet-Contracts/erc20_stark
+cd Starknet-Contracts/token_vendor
 ```
 
 and build the project by
@@ -21,21 +21,12 @@ scarb build
 
 Everything you need to declare-deploy-interaction and  testing resides in Makefile.
 
-
-Unlike solidity u256 ,in starknet it uses tuple for u256
-```
-struct u256 {
-  low: felt252,
-  high: felt252
-}
-```
 so while deploying the contructor call data should be like this 
 
 ```
---constructor-calldata 10000000 0 0xYourRecipientAddress
-
+--arguments 1000000000_u256 
 ```
-or use --arguments flag for serialized elements.
+ use --arguments flag for serialized elements.Above for u256 argument.
 
 After Declare and Deployment makefile will copy the returned values as ;
 

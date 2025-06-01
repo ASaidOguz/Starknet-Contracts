@@ -1,38 +1,47 @@
-# ========= StarkNet Makefile =========
+.PHONY: help start_dev set_account set_sepolia_account deploy_sepolia_account test test_coverage clear_coverage
 
-SHELL := /bin/bash
+# Default target - show help
+.DEFAULT_GOAL := help
 
-.PHONY: help start_dev set_account declare_local deploy_contract mint_nft set_sepolia_account deploy_sepolia_account declare_sepolia deploy_contract_sepolia invoke_string_arg invoke_str_sepolia call_string_arg test
-
-help:
+help: ## Show this help message
+	@echo "🛠️  Available Makefile targets:"
 	@echo ""
-	@echo "========= StarkNet Makefile Commands ========="
+	@echo "📋 GENERAL COMMANDS:"
+	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "  \033[36m%-25s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST) | grep -E "(start_dev|set_|test|clear_coverage)"
 	@echo ""
-	@echo "🧪 Local Dev Commands"   
-	@echo "  make start_dev                                                                    # Start local devnet with fixed seed"
-	@echo "  make set_account                                                                  # Import predefined devnet account"
-	@echo "  make declare_local CONTRACT_NAME=<name>                                           # Declare a local contract"
-	@echo "  make deploy_contract AMOUNT_LOW=<low> AMOUNT_HIGH=<high> OWNER=<address>          # Deploy locally"
-	@echo "  make mint_local RECIPIENT=<address> AMOUNT_LOW=<low> AMOUNT_HIGH=<high>           # Mint tokens locally"
+	@echo "📋 CONTRACT OPERATIONS:"
+	@echo "  For each deployable contract found in src/, the following targets are generated:"
+	@echo "    \033[36mdeclare_local_<contract>\033[0m     Declare contract on local devnet"
+	@echo "    \033[36mdeclare_sepolia_<contract>\033[0m   Declare contract on Sepolia testnet"
+	@echo "    \033[36mdeploy_local_<contract>\033[0m      Deploy contract on local devnet"
+	@echo "    \033[36mdeploy_sepolia_<contract>\033[0m    Deploy contract on Sepolia testnet"
 	@echo ""
-	@echo "🌍 Sepolia Testnet Commands"
-	@echo "  make set_sepolia_account                                                          # Create new Sepolia account"
-	@echo "  make deploy_sepolia_account                                                       # Deploy Sepolia account to network"
-	@echo "  make declare_sepolia CONTRACT_NAME=<name>                                         # Declare a contract on Sepolia"
-	@echo "  make deploy_contract_sepolia AMOUNT_LOW=<low> AMOUNT_HIGH=<high> OWNER=<address>  # Deploy to Sepolia"
+	@echo "📋 AVAILABLE DEPLOYABLE CONTRACTS:"
+	@find src -type f -name "*.cairo" -exec grep -l "#\[starknet::contract\]" {} \; | while read file; do \
+		contract_name=$$(grep -A 1 "#\[starknet::contract\]" "$$file" | grep -o 'mod [a-zA-Z_][a-zA-Z0-9_]*' | head -n1 | cut -d' ' -f2); \
+		if [ -n "$$contract_name" ]; then \
+			echo "    • $$contract_name"; \
+		fi; \
+	done
 	@echo ""
-	@echo "📌 Example:"
-	@echo "  make declare_local CONTRACT_NAME=MyERC20"
-	@echo "  make deploy_contract AMOUNT_LOW=1000 AMOUNT_HIGH=0 OWNER=0x123..."
-	@echo "  make mint_local RECIPIENT=0xabc... AMOUNT_LOW=500 AMOUNT_HIGH=0"
+	@echo "📋 USAGE EXAMPLES:"
+	@echo "  make start_dev                    # Start local devnet"
+	@echo "  make set_account                  # Set up devnet account"
+	@echo "  make declare_local_<contract>     # Declare a contract locally"
+	@echo "  make deploy_local_<contract>      # Deploy a contract locally"
+	@echo "  make ARGUMENTS='arg1 arg2' deploy_local_<contract>  # Deploy with constructor args"
+	@echo ""
+	@echo "📋 DEPLOYMENT WORKFLOW:"
+	@echo "  1. make start_dev                 # Start devnet in another terminal"
+	@echo "  2. make set_account              # Import devnet account"
+	@echo "  3. make declare_local_<contract> # Declare your contract"
+	@echo "  4. make deploy_local_<contract>  # Deploy your contract"
 	@echo ""
 
-
-
-start_dev:
+start_dev: ## Start Starknet devnet with seed 0
 	starknet-devnet --seed=0
 
-set_account:
+set_account: ## Import devnet account for local development
 	sncast account import \
 	--address=0x064b48806902a367c8598f4f95c305e8c1a1acba5f082d294a43793113115691 \
 	--type=oz \
@@ -41,111 +50,205 @@ set_account:
 	--add-profile=devnet \
 	--silent
 
-set_sepolia_account:
+set_sepolia_account: ## Create Sepolia testnet account
 	sncast account create --network=sepolia --name=sepolia
 
-deploy_sepolia_account:
+deploy_sepolia_account: ## Deploy Sepolia testnet account
 	sncast account deploy --network sepolia --name sepolia
 
-declare_local:
-	@echo "Declaring $(CONTRACT_NAME)..."
-	@sncast --profile=devnet declare --contract-name=$(CONTRACT_NAME) > tmp_declare_output.txt; \
-	class_hash=$$(grep -o 'class_hash: 0x[0-9a-fA-F]*' tmp_declare_output.txt | cut -d ' ' -f2); \
-	timestamp=$$(date +%s); \
-	echo "{\"class_hash\": \"$$class_hash\", \"contract_name\": \"$(CONTRACT_NAME)\", \"timestamp\": $$timestamp}" > .last_declared_local.json; \
-	echo "Saved class hash: $$class_hash"; \
-	rm tmp_declare_output.txt
-
-declare_sepolia:
-	@echo "Declaring $(CONTRACT_NAME)..."
-	@sncast --account=sepolia declare --contract-name=$(CONTRACT_NAME) --network sepolia > tmp_declare_output.txt; \
-	class_hash=$$(grep -o 'class_hash: 0x[0-9a-fA-F]*' tmp_declare_output.txt | cut -d ' ' -f2); \
-	timestamp=$$(date +%s); \
-	echo "{\"class_hash\": \"$$class_hash\", \"contract_name\": \"$(CONTRACT_NAME)\", \"timestamp\": $$timestamp}" > .last_declared_sepolia.json; \
-	echo "Saved class hash: $$class_hash"; \
-	rm tmp_declare_output.txt
-
-deploy_contract:
-ifndef AMOUNT_LOW
-	$(error AMOUNT_LOW not set)
-endif
-ifndef AMOUNT_HIGH
-	$(error AMOUNT_HIGH not set)
-endif
-ifndef OWNER
-	$(error OWNER not set)
-endif
-	$(eval CLASS_HASH := $(shell jq -r '.class_hash' .last_declared_local.json))
-	@echo "Deploying contract with class hash $(CLASS_HASH)..."
-	@output=$$(sncast --profile=devnet deploy \
-		--class-hash=$(CLASS_HASH) \
-		--salt=0 \
-		--constructor-calldata $(AMOUNT_LOW) $(AMOUNT_HIGH) $(OWNER)); \
-	contract_address=$$(echo "$$output" | grep "contract_address:" | awk '{print $$2}'); \
-	transaction_hash=$$(echo "$$output" | grep "transaction_hash:" | awk '{print $$2}'); \
-	timestamp=$$(date +%s); \
-	echo "{\"contract_address\": \"$$contract_address\", \"transaction_hash\": \"$$transaction_hash\", \"timestamp\": $$timestamp}" > .last_deployed_local_contract.json; \
-	echo "$$output"
-	
-deploy_contract_sepolia:
-ifndef AMOUNT_LOW
-	$(error AMOUNT_LOW not set)
-endif
-ifndef AMOUNT_HIGH
-	$(error AMOUNT_HIGH not set)
-endif
-ifndef OWNER
-	$(error OWNER not set)
-endif
-	$(eval CLASS_HASH := $(shell jq -r '.class_hash' .last_declared_sepolia.json))
-	@echo "Deploying contract with class hash $(CLASS_HASH)..."
-	@output=$$(sncast --account=sepolia deploy \
-		--class-hash=$(CLASS_HASH) \
-		--network=sepolia \
-		--salt=1 \
-		--constructor-calldata $(AMOUNT_LOW) $(AMOUNT_HIGH) $(OWNER)); \
-	contract_address=$$(echo "$$output" | grep "contract_address:" | awk '{print $$2}'); \
-	transaction_hash=$$(echo "$$output" | grep "transaction_hash:" | awk '{print $$2}'); \
-	timestamp=$$(date +%s); \
-	echo "{\"contract_address\": \"$$contract_address\", \"transaction_hash\": \"$$transaction_hash\", \"timestamp\": $$timestamp}" > .last_deployed_sepolia_contract.json; \
-	echo "$$output"
-
-
-mint_local:
-ifndef RECIPIENT
-	$(error RECIPIENT not set)
-endif
-ifndef AMOUNT_LOW
-	$(error AMOUNT_LOW not set)
-endif
-ifndef AMOUNT_HIGH
-	$(error AMOUNT_HIGH not set)
-endif
-	$(eval ADDRESS := $(shell jq -r '.contract_address' .last_deployed_local_contract.json))
-	@echo "Minting to $(RECIPIENT) amount: $(AMOUNT_LOW) $(AMOUNT_HIGH)..."
-	@sncast --profile=devnet invoke \
-		--contract-address=$(ADDRESS) \
-		--function=mint \
-		--calldata $(RECIPIENT) $(AMOUNT_LOW) $(AMOUNT_HIGH)
-
-test:
+# Testing and Coverage
+test: ## Run all tests using Scarb
 	@echo "Running tests..."
 	scarb test
+
 # Coverage Report Generation
 PROJECT_NAME := $(shell grep '^name' Scarb.toml | head -n1 | sed 's/name *= *//; s/"//g')
 REPORT_DIR ?= coverage_report
 REPORTS_BASE ?= /mnt/c/stark-reports/coverage-reports
 PROJECT_REPORT_DIR ?= $(REPORTS_BASE)/$(PROJECT_NAME)
-
 WINDOWS_REPORT_DIR = C:\\stark-reports\\coverage-reports\\$(PROJECT_NAME)
 CHROME_PATH ?= C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe
 
-test_coverage:
+test_coverage: ## Generate test coverage report and open in browser
 	snforge test --coverage
 	genhtml -o $(REPORT_DIR) ./coverage/coverage.lcov
 	mkdir -p $(PROJECT_REPORT_DIR)
 	cp -r $(REPORT_DIR)/* $(PROJECT_REPORT_DIR)/
 	powershell.exe -Command "Start-Process '$(CHROME_PATH)' -ArgumentList '$(WINDOWS_REPORT_DIR)\\index.html'"
 
-clean_cov:
+clear_coverage: ## Clean coverage data
 	cairo-coverage clean
+
+# Declare and Deploy targets for Erc20TL
+
+declare_local_Erc20TL: ## Declare Erc20TL contract on local devnet
+	@echo "Declaring Erc20TL (local)..."
+	@mkdir -p deployments/devnet/local
+	@if sncast --profile=devnet declare --contract-name=Erc20TL > tmp_declare_output.txt 2>&1; then \
+		class_hash=$$(grep -o 'class_hash: 0x[0-9a-fA-F]*' tmp_declare_output.txt | cut -d ' ' -f2); \
+		if [ -n "$$class_hash" ]; then \
+			timestamp=$$(date +%s); \
+			printf '{"class_hash": "%s", "contract_name": "%s", "timestamp": %s}\n' "$$class_hash" "Erc20TL" "$$timestamp" > deployments/devnet/local/Erc20TL.json; \
+			echo "✅ Saved class hash: $$class_hash to deployments/devnet/local/Erc20TL.json"; \
+		else \
+			echo "❌ Failed to extract class hash from output"; \
+			cat tmp_declare_output.txt; \
+		fi; \
+	else \
+		echo "❌ Declaration failed for Erc20TL"; \
+		cat tmp_declare_output.txt; \
+	fi; \
+	rm -f tmp_declare_output.txt
+
+declare_sepolia_Erc20TL: ## Declare Erc20TL contract on Sepolia testnet
+	@echo "Declaring Erc20TL (sepolia)..."
+	@mkdir -p deployments/sepolia/sepolia
+	@if sncast --account=sepolia declare --contract-name=Erc20TL --network sepolia > tmp_declare_output.txt 2>&1; then \
+		class_hash=$$(grep -o 'class_hash: 0x[0-9a-fA-F]*' tmp_declare_output.txt | cut -d ' ' -f2); \
+		if [ -n "$$class_hash" ]; then \
+			timestamp=$$(date +%s); \
+			printf '{"class_hash": "%s", "contract_name": "%s", "timestamp": %s}\n' "$$class_hash" "Erc20TL" "$$timestamp" > deployments/sepolia/sepolia/Erc20TL.json; \
+			echo "✅ Saved class hash: $$class_hash to deployments/sepolia/sepolia/Erc20TL.json"; \
+		else \
+			echo "❌ Failed to extract class hash from output"; \
+			cat tmp_declare_output.txt; \
+		fi; \
+	else \
+		echo "❌ Declaration failed for Erc20TL"; \
+		cat tmp_declare_output.txt; \
+	fi; \
+	rm -f tmp_declare_output.txt
+
+deploy_local_Erc20TL: ## Deploy Erc20TL contract on local devnet (use ARGUMENTS='arg1 arg2' for constructor args)
+	@echo "Deploying Erc20TL (local)..."
+	@mkdir -p deployments/devnet/local
+	@if [ ! -f "deployments/devnet/local/Erc20TL.json" ]; then \
+		echo "❌ Class hash file not found. Please declare the contract first with: make declare_local_Erc20TL"; \
+		exit 1; \
+	fi
+	$(eval CLASS_HASH := $(shell jq -r '.class_hash' deployments/devnet/local/Erc20TL.json))
+	@output=$$(sncast --profile=devnet deploy \
+		--arguments $(ARGUMENTS) \
+		--class-hash=$(CLASS_HASH) \
+		--salt=5 \
+		); \
+	contract_address=$$(echo "$$output" | grep "contract_address:" | awk '{print $$2}'); \
+	transaction_hash=$$(echo "$$output" | grep "transaction_hash:" | awk '{print $$2}'); \
+	timestamp=$$(date +%s); \
+	printf '{"contract_address": "%s", "transaction_hash": "%s", "class_hash": "%s", "contract_name": "%s", "timestamp": %s}\n' "$$contract_address" "$$transaction_hash" "$(CLASS_HASH)" "Erc20TL" "$$timestamp" > deployments/devnet/local/Erc20TL.deployment.json; \
+	echo "✅ Deployed Erc20TL successfully!"; \
+	echo "Contract Address: $$contract_address"; \
+	echo "Transaction Hash: $$transaction_hash"; \
+	echo "Deployment saved to: deployments/devnet/local/Erc20TL.deployment.json"; \
+	echo "$$output"
+
+deploy_sepolia_Erc20TL: ## Deploy Erc20TL contract on Sepolia testnet (use ARGUMENTS='arg1 arg2' for constructor args)
+	@echo "Deploying Erc20TL (sepolia)..."
+	@mkdir -p deployments/sepolia/sepolia
+	@if [ ! -f "deployments/sepolia/sepolia/Erc20TL.json" ]; then \
+		echo "❌ Class hash file not found. Please declare the contract first with: make declare_sepolia_Erc20TL"; \
+		exit 1; \
+	fi
+	$(eval CLASS_HASH := $(shell jq -r '.class_hash' deployments/sepolia/sepolia/Erc20TL.json))
+	@output=$$(sncast --account=sepolia deploy \
+		--arguments $(ARGUMENTS) \
+		--class-hash=$(CLASS_HASH) \
+		--network sepolia \
+		--salt=5 \
+		); \
+	contract_address=$$(echo "$$output" | grep "contract_address:" | awk '{print $$2}'); \
+	transaction_hash=$$(echo "$$output" | grep "transaction_hash:" | awk '{print $$2}'); \
+	timestamp=$$(date +%s); \
+	printf '{"contract_address": "%s", "transaction_hash": "%s", "class_hash": "%s", "contract_name": "%s", "timestamp": %s}\n' "$$contract_address" "$$transaction_hash" "$(CLASS_HASH)" "Erc20TL" "$$timestamp" > deployments/sepolia/sepolia/Erc20TL.deployment.json; \
+	echo "✅ Deployed Erc20TL successfully!"; \
+	echo "Contract Address: $$contract_address"; \
+	echo "Transaction Hash: $$transaction_hash"; \
+	echo "Deployment saved to: deployments/sepolia/sepolia/Erc20TL.deployment.json"; \
+	echo "$$output"
+
+# Declare and Deploy targets for MockStarkToken
+
+declare_local_MockStarkToken: ## Declare MockStarkToken contract on local devnet
+	@echo "Declaring MockStarkToken (local)..."
+	@mkdir -p deployments/devnet/local
+	@if sncast --profile=devnet declare --contract-name=MockStarkToken > tmp_declare_output.txt 2>&1; then \
+		class_hash=$$(grep -o 'class_hash: 0x[0-9a-fA-F]*' tmp_declare_output.txt | cut -d ' ' -f2); \
+		if [ -n "$$class_hash" ]; then \
+			timestamp=$$(date +%s); \
+			printf '{"class_hash": "%s", "contract_name": "%s", "timestamp": %s}\n' "$$class_hash" "MockStarkToken" "$$timestamp" > deployments/devnet/local/MockStarkToken.json; \
+			echo "✅ Saved class hash: $$class_hash to deployments/devnet/local/MockStarkToken.json"; \
+		else \
+			echo "❌ Failed to extract class hash from output"; \
+			cat tmp_declare_output.txt; \
+		fi; \
+	else \
+		echo "❌ Declaration failed for MockStarkToken"; \
+		cat tmp_declare_output.txt; \
+	fi; \
+	rm -f tmp_declare_output.txt
+
+declare_sepolia_MockStarkToken: ## Declare MockStarkToken contract on Sepolia testnet
+	@echo "Declaring MockStarkToken (sepolia)..."
+	@mkdir -p deployments/sepolia/sepolia
+	@if sncast --account=sepolia declare --contract-name=MockStarkToken --network sepolia > tmp_declare_output.txt 2>&1; then \
+		class_hash=$$(grep -o 'class_hash: 0x[0-9a-fA-F]*' tmp_declare_output.txt | cut -d ' ' -f2); \
+		if [ -n "$$class_hash" ]; then \
+			timestamp=$$(date +%s); \
+			printf '{"class_hash": "%s", "contract_name": "%s", "timestamp": %s}\n' "$$class_hash" "MockStarkToken" "$$timestamp" > deployments/sepolia/sepolia/MockStarkToken.json; \
+			echo "✅ Saved class hash: $$class_hash to deployments/sepolia/sepolia/MockStarkToken.json"; \
+		else \
+			echo "❌ Failed to extract class hash from output"; \
+			cat tmp_declare_output.txt; \
+		fi; \
+	else \
+		echo "❌ Declaration failed for MockStarkToken"; \
+		cat tmp_declare_output.txt; \
+	fi; \
+	rm -f tmp_declare_output.txt
+
+deploy_local_MockStarkToken: ## Deploy MockStarkToken contract on local devnet (use ARGUMENTS='arg1 arg2' for constructor args)
+	@echo "Deploying MockStarkToken (local)..."
+	@mkdir -p deployments/devnet/local
+	@if [ ! -f "deployments/devnet/local/MockStarkToken.json" ]; then \
+		echo "❌ Class hash file not found. Please declare the contract first with: make declare_local_MockStarkToken"; \
+		exit 1; \
+	fi
+	$(eval CLASS_HASH := $(shell jq -r '.class_hash' deployments/devnet/local/MockStarkToken.json))
+	@output=$$(sncast --profile=devnet deploy \
+		--arguments $(ARGUMENTS) \
+		--class-hash=$(CLASS_HASH) \
+		--salt=5 \
+		); \
+	contract_address=$$(echo "$$output" | grep "contract_address:" | awk '{print $$2}'); \
+	transaction_hash=$$(echo "$$output" | grep "transaction_hash:" | awk '{print $$2}'); \
+	timestamp=$$(date +%s); \
+	printf '{"contract_address": "%s", "transaction_hash": "%s", "class_hash": "%s", "contract_name": "%s", "timestamp": %s}\n' "$$contract_address" "$$transaction_hash" "$(CLASS_HASH)" "MockStarkToken" "$$timestamp" > deployments/devnet/local/MockStarkToken.deployment.json; \
+	echo "✅ Deployed MockStarkToken successfully!"; \
+	echo "Contract Address: $$contract_address"; \
+	echo "Transaction Hash: $$transaction_hash"; \
+	echo "Deployment saved to: deployments/devnet/local/MockStarkToken.deployment.json"; \
+	echo "$$output"
+
+deploy_sepolia_MockStarkToken: ## Deploy MockStarkToken contract on Sepolia testnet (use ARGUMENTS='arg1 arg2' for constructor args)
+	@echo "Deploying MockStarkToken (sepolia)..."
+	@mkdir -p deployments/sepolia/sepolia
+	@if [ ! -f "deployments/sepolia/sepolia/MockStarkToken.json" ]; then \
+		echo "❌ Class hash file not found. Please declare the contract first with: make declare_sepolia_MockStarkToken"; \
+		exit 1; \
+	fi
+	$(eval CLASS_HASH := $(shell jq -r '.class_hash' deployments/sepolia/sepolia/MockStarkToken.json))
+	@output=$$(sncast --account=sepolia deploy \
+		--arguments $(ARGUMENTS) \
+		--class-hash=$(CLASS_HASH) \
+		--network sepolia \
+		--salt=5 \
+		); \
+	contract_address=$$(echo "$$output" | grep "contract_address:" | awk '{print $$2}'); \
+	transaction_hash=$$(echo "$$output" | grep "transaction_hash:" | awk '{print $$2}'); \
+	timestamp=$$(date +%s); \
+	printf '{"contract_address": "%s", "transaction_hash": "%s", "class_hash": "%s", "contract_name": "%s", "timestamp": %s}\n' "$$contract_address" "$$transaction_hash" "$(CLASS_HASH)" "MockStarkToken" "$$timestamp" > deployments/sepolia/sepolia/MockStarkToken.deployment.json; \
+	echo "✅ Deployed MockStarkToken successfully!"; \
+	echo "Contract Address: $$contract_address"; \
+	echo "Transaction Hash: $$transaction_hash"; \
+	echo "Deployment saved to: deployments/sepolia/sepolia/MockStarkToken.deployment.json"; \
+	echo "$$output"
