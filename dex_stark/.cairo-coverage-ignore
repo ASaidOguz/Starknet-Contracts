@@ -9,3 +9,5 @@ test_*.cairo
 
 # Ignore mock contracts
 MockSTRKToken.cairo
+Balloons.cairo
+
