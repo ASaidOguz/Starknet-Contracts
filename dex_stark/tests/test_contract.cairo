@@ -357,7 +357,51 @@ fn test_tokenToStrk_scenario_2() {
     println!("-- Expecting Recipient2 to have aquired more STRK than Recipient3...");
     assert_gt!(receipt2_after_ballance , receipt3_after_ballance, "token_to_strk() is wrong");
 }
+// PANIC TESTS starts here ------------------------------------------------------------------->
+#[test]
+#[should_panic(expected: ('Already initialized',))]
+fn test_dex_cant_init_again(){
+    let (dex_contract_address, _, _) = deploy_dex_contract();
+    let dex_dispatcher = IDexDispatcher { contract_address: dex_contract_address };
+    //No need to call approve from CONTRACTS cause it wont even reach to transfer_from function 
+    // It will revert in start.
+    // Try to re-initialize the DEX contract
+    cheat_caller_address(dex_contract_address, RECIPIENT, CheatSpan::TargetCalls(1));
+    dex_dispatcher.init(INITIAL_STRK_SUPPLY, INITIAL_STRK_SUPPLY);
+}
+#[test]
+#[should_panic(expected: ('Cannot swap 0 strk',))]
+fn test_strkToToken_revert_by_sending_zero_strk() {
+    let (dex_contract_address, _, _) = deploy_dex_contract();
+    let dex_dispatcher = IDexDispatcher { contract_address: dex_contract_address };
+    dex_dispatcher.strk_to_token(0);
+}
 
+#[test]
+#[should_panic(expected: ('Cannot swap 0 tokens',))]
+fn test_tokenToStrk_revert_by_sending_zero_token() {
+    let (dex_contract_address, _, _) = deploy_dex_contract();
+    let dex_dispatcher = IDexDispatcher { contract_address: dex_contract_address };
+    dex_dispatcher.token_to_strk(0);
+}
+
+#[test]
+#[should_panic(expected: ('Deposit must greater than 0',))]
+fn test_deposit_with_zero_strk() {
+    let (dex_contract_address, _, _) = deploy_dex_contract();
+    let dex_dispatcher = IDexDispatcher { contract_address: dex_contract_address };
+    dex_dispatcher.deposit(0,0);
+}
+
+#[test]
+#[should_panic(expected: ('Insufficient liquidity',))]
+fn test_withdraw_with_not_enough_liquidity() {
+    let (dex_contract_address, _, _) = deploy_dex_contract();
+    let dex_dispatcher = IDexDispatcher { contract_address: dex_contract_address };
+    dex_dispatcher.withdraw(INITIAL_RECIPIENT_SUPPLY);
+}
+
+// PANIC TESTS ends here -------------------------------------------------------------------<
 #[test]
 fn test_withdraw_ratio_1_1() {
     let (dex_contract_address, strk_token_address, balloons_token_address) = deploy_dex_contract();

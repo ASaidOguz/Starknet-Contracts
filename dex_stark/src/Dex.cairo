@@ -69,7 +69,7 @@ pub trait IDex<TContractState> {
     /// Args:
     ///     self: The contract state.
     ///     strk_amount: The amount of STRK to deposit.
-    ///
+    ///     token_amount: The amount of tokens to deposit.
     /// Returns:
     ///     u256: The amount of liquidity minted.
     fn deposit(ref self: TContractState, strk_amount: u256,token_amount:u256) -> u256;
@@ -97,7 +97,7 @@ pub trait IDex<TContractState> {
 
 #[starknet::contract]
 mod Dex {
-     use core::num::traits::{CheckedMul,CheckedSub,CheckedAdd};
+    use core::num::traits::{CheckedMul,CheckedSub,CheckedAdd};
     use dex_stark::Balloons::{IBalloonsDispatcher, IBalloonsDispatcherTrait};
     use openzeppelin_access::ownable::OwnableComponent;
     use openzeppelin_token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
@@ -120,13 +120,14 @@ mod Dex {
     struct Storage {
         #[substorage(v0)]
         ownable: OwnableComponent::Storage,
+        initialized:bool,
         strk_token: IERC20Dispatcher,
         token: IBalloonsDispatcher,
         total_liquidity: u256,
         liquidity: Map<ContractAddress, u256>,
     }
 
-    // Todo Checkpoint 4:  Define the events.
+    
     #[event]
     #[derive(Drop, starknet::Event)]
     enum Event {
@@ -190,8 +191,8 @@ mod Dex {
 
         //self.ownnable.initializer(get_caller_address()); -->❌✖️🅧🇽❎❌🗙
 
-        // contract is deployed by universal deployer, so we cant use get_contract_address() it will 
-        // return universal deployer address as owner here so changed it to this  
+        // contract is deployed by universal deployer, so we cant use get_contract_address() inside contructor 
+        // it will return universal deployer address as owner -> updated correclty below. 
         self.ownable.initializer(owner); // ✅ explicitly set owner
         self.strk_token.write(IERC20Dispatcher { contract_address: strk_token_address });
         self.token.write(IBalloonsDispatcher { contract_address: token_address });
@@ -199,7 +200,6 @@ mod Dex {
 
     #[abi(embed_v0)]
     impl DexImpl of IDex<ContractState> {
-        // Todo Checkpoint 2:  Implement your function init here.
         /// Initializes the DEX with the specified amounts of tokens and STRK.
         ///
         /// Args:
@@ -212,6 +212,7 @@ mod Dex {
         fn init(ref self: ContractState, tokens: u256, strk: u256) -> (u256, u256) {
             // validate owner,
             self.ownable.assert_only_owner();
+            assert(!self.initialized.read(), 'Already initialized');
             let caller = get_caller_address();
            
             let success_token = self.token.read().transfer_from(caller,get_contract_address(),tokens);
@@ -231,6 +232,8 @@ mod Dex {
                 strk_input: strk,
                 tokens_input: tokens,
             });
+            // Mark the contract as initialized.
+            self.initialized.write(true);
             (tokens, strk)
         }
 
@@ -307,6 +310,7 @@ mod Dex {
         /// Returns:
         ///     u256: The amount of tokens received.
         fn strk_to_token(ref self: ContractState, strk_input: u256) -> u256 {
+            assert(strk_input !=0_u256,'Cannot swap 0 strk');
             // first get the reserves of tokens and STRK
             let x_reserves = self.strk_token.read().balance_of(get_contract_address());
             let y_reserves=  self.token.read().balance_of(get_contract_address());
@@ -337,6 +341,7 @@ mod Dex {
         /// Returns:
         ///     u256: The amount of STRK received.
         fn token_to_strk(ref self: ContractState, token_input: u256) -> u256 {
+            assert(token_input !=0_u256,'Cannot swap 0 tokens');
                  // first get the reserves of tokens and STRK
             let x_reserves = self.token.read().balance_of(get_contract_address());
             let y_reserves= self.strk_token.read().balance_of(get_contract_address());
@@ -372,6 +377,7 @@ mod Dex {
         /// It would break the constant product invariant x * y = k.
         /// It's not a real liquidity addition — it's closer to a swap without removing output tokens.
         fn deposit(ref self: ContractState, strk_amount: u256,token_amount:u256) -> u256 {
+                assert(strk_amount != 0_u256||token_amount!=0_u256, 'Deposit must greater than 0');
                 let caller = get_caller_address();
                 let get_token_amount = self.get_deposit_token_amount(strk_amount);
                 assert(token_amount == get_token_amount, 'Pair invalid');
@@ -437,7 +443,7 @@ mod Dex {
         ///     (u256, u256): The amounts of STRK and tokens withdrawn.
         fn withdraw(ref self: ContractState, amount: u256) -> (u256, u256) {
             let caller = get_caller_address();
-            assert(amount <= self.get_liquidity(caller), 'Not enough liquidity');
+            assert(amount <= self.get_liquidity(caller), 'Insufficient liquidity');
             let total_liquidity = self.get_total_liquidity();
             let strk_reserves = self.strk_token.read().balance_of(get_contract_address());
             let token_reserves = self.token.read().balance_of(get_contract_address());
