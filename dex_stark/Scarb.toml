@@ -4,22 +4,35 @@ version = "0.1.0"
 edition = "2024_07"
 
 # See more keys and their definitions at https://docs.swmansion.com/scarb/docs/reference/manifest.html
-
 [dependencies]
 starknet = "2.11.4"
+openzeppelin_access = "1.0.0"
+openzeppelin_token = "1.0.0"
 
 [dev-dependencies]
-snforge_std = "0.42.0"
-assert_macros = "2.11.4"
+openzeppelin_utils = "1.0.0"
+openzeppelin_testing = "3.0.0"
+snforge_std = "0.41.0"
+assert_macros = "2.9.4"
 
 [[target.starknet-contract]]
-sierra = true
+casm = true # taggle this to `false` to speed up compilation/script tests
+
+[tool.scarb]
+allow-prebuilt-plugins = [
+	"snforge_std",
+] # Avoids the need to install Rust for snforge_std/starknet-foundry
 
 [scripts]
 test = "snforge test"
 
-[tool.scarb]
-allow-prebuilt-plugins = ["snforge_std"]
+[tool.fmt]
+sort-module-level-items = true
+
+[[tool.snforge.fork]]
+name = "SEPOLIA_LATEST"
+url = "https://starknet-sepolia.public.blastapi.io/rpc/v0_8"
+block_id.tag = "latest"
 
 # Visit https://foundry-rs.github.io/starknet-foundry/appendix/scarb-toml.html for more information
 
