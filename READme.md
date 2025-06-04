@@ -20,3 +20,5 @@ to see your deployable contracts.
 Erc20 and Erc721 projects have own READme files to interact and have Makefile section where it can be easly start and deploy either.
 
 local chain or sepolia testnet.
+
+- Need to update all zero checks with "use core::num::traits::Zero;"
