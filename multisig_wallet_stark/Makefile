@@ -166,6 +166,93 @@ deploy_sepolia_CustomMultisigWallet: ## Deploy CustomMultisigWallet contract on 
 	echo "Deployment saved to: deployments/sepolia/sepolia/CustomMultisigWallet.deployment.json"; \
 	echo "$$output"
 
+# Declare and Deploy targets for MockSTRKToken
+
+declare_local_MockSTRKToken: ## Declare MockSTRKToken contract on local devnet
+	@echo "Declaring MockSTRKToken (local)..."
+	@mkdir -p deployments/devnet/local
+	@if sncast --profile=devnet declare --contract-name=MockSTRKToken > tmp_declare_output.txt 2>&1; then \
+		class_hash=$$(grep -o 'class_hash: 0x[0-9a-fA-F]*' tmp_declare_output.txt | cut -d ' ' -f2); \
+		if [ -n "$$class_hash" ]; then \
+			timestamp=$$(date +%s); \
+			printf '{"class_hash": "%s", "contract_name": "%s", "timestamp": %s}\n' "$$class_hash" "MockSTRKToken" "$$timestamp" > deployments/devnet/local/MockSTRKToken.json; \
+			echo "✅ Saved class hash: $$class_hash to deployments/devnet/local/MockSTRKToken.json"; \
+		else \
+			echo "❌ Failed to extract class hash from output"; \
+			cat tmp_declare_output.txt; \
+		fi; \
+	else \
+		echo "❌ Declaration failed for MockSTRKToken"; \
+		cat tmp_declare_output.txt; \
+	fi; \
+	rm -f tmp_declare_output.txt
+
+declare_sepolia_MockSTRKToken: ## Declare MockSTRKToken contract on Sepolia testnet
+	@echo "Declaring MockSTRKToken (sepolia)..."
+	@mkdir -p deployments/sepolia/sepolia
+	@if sncast --account=sepolia declare --contract-name=MockSTRKToken --network sepolia > tmp_declare_output.txt 2>&1; then \
+		class_hash=$$(grep -o 'class_hash: 0x[0-9a-fA-F]*' tmp_declare_output.txt | cut -d ' ' -f2); \
+		if [ -n "$$class_hash" ]; then \
+			timestamp=$$(date +%s); \
+			printf '{"class_hash": "%s", "contract_name": "%s", "timestamp": %s}\n' "$$class_hash" "MockSTRKToken" "$$timestamp" > deployments/sepolia/sepolia/MockSTRKToken.json; \
+			echo "✅ Saved class hash: $$class_hash to deployments/sepolia/sepolia/MockSTRKToken.json"; \
+		else \
+			echo "❌ Failed to extract class hash from output"; \
+			cat tmp_declare_output.txt; \
+		fi; \
+	else \
+		echo "❌ Declaration failed for MockSTRKToken"; \
+		cat tmp_declare_output.txt; \
+	fi; \
+	rm -f tmp_declare_output.txt
+
+deploy_local_MockSTRKToken: ## Deploy MockSTRKToken contract on local devnet (use ARGUMENTS='arg1 arg2' for constructor args)
+	@echo "Deploying MockSTRKToken (local)..."
+	@mkdir -p deployments/devnet/local
+	@if [ ! -f "deployments/devnet/local/MockSTRKToken.json" ]; then \
+		echo "❌ Class hash file not found. Please declare the contract first with: make declare_local_MockSTRKToken"; \
+		exit 1; \
+	fi
+	$(eval CLASS_HASH := $(shell jq -r '.class_hash' deployments/devnet/local/MockSTRKToken.json))
+	@output=$$(sncast --profile=devnet deploy \
+		--arguments $(ARGUMENTS) \
+		--class-hash=$(CLASS_HASH) \
+		--salt=5 \
+		); \
+	contract_address=$$(echo "$$output" | grep "contract_address:" | awk '{print $$2}'); \
+	transaction_hash=$$(echo "$$output" | grep "transaction_hash:" | awk '{print $$2}'); \
+	timestamp=$$(date +%s); \
+	printf '{"contract_address": "%s", "transaction_hash": "%s", "class_hash": "%s", "contract_name": "%s", "timestamp": %s}\n' "$$contract_address" "$$transaction_hash" "$(CLASS_HASH)" "MockSTRKToken" "$$timestamp" > deployments/devnet/local/MockSTRKToken.deployment.json; \
+	echo "✅ Deployed MockSTRKToken successfully!"; \
+	echo "Contract Address: $$contract_address"; \
+	echo "Transaction Hash: $$transaction_hash"; \
+	echo "Deployment saved to: deployments/devnet/local/MockSTRKToken.deployment.json"; \
+	echo "$$output"
+
+deploy_sepolia_MockSTRKToken: ## Deploy MockSTRKToken contract on Sepolia testnet (use ARGUMENTS='arg1 arg2' for constructor args)
+	@echo "Deploying MockSTRKToken (sepolia)..."
+	@mkdir -p deployments/sepolia/sepolia
+	@if [ ! -f "deployments/sepolia/sepolia/MockSTRKToken.json" ]; then \
+		echo "❌ Class hash file not found. Please declare the contract first with: make declare_sepolia_MockSTRKToken"; \
+		exit 1; \
+	fi
+	$(eval CLASS_HASH := $(shell jq -r '.class_hash' deployments/sepolia/sepolia/MockSTRKToken.json))
+	@output=$$(sncast --account=sepolia deploy \
+		--arguments $(ARGUMENTS) \
+		--class-hash=$(CLASS_HASH) \
+		--network sepolia \
+		--salt=5 \
+		); \
+	contract_address=$$(echo "$$output" | grep "contract_address:" | awk '{print $$2}'); \
+	transaction_hash=$$(echo "$$output" | grep "transaction_hash:" | awk '{print $$2}'); \
+	timestamp=$$(date +%s); \
+	printf '{"contract_address": "%s", "transaction_hash": "%s", "class_hash": "%s", "contract_name": "%s", "timestamp": %s}\n' "$$contract_address" "$$transaction_hash" "$(CLASS_HASH)" "MockSTRKToken" "$$timestamp" > deployments/sepolia/sepolia/MockSTRKToken.deployment.json; \
+	echo "✅ Deployed MockSTRKToken successfully!"; \
+	echo "Contract Address: $$contract_address"; \
+	echo "Transaction Hash: $$transaction_hash"; \
+	echo "Deployment saved to: deployments/sepolia/sepolia/MockSTRKToken.deployment.json"; \
+	echo "$$output"
+
 # Declare and Deploy targets for MultisigWallet
 
 declare_local_MultisigWallet: ## Declare MultisigWallet contract on local devnet

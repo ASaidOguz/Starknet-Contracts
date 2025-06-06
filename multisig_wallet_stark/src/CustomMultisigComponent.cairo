@@ -295,7 +295,10 @@ pub mod MultisigComponent {
         fn change_quorum(ref self: ComponentState<TContractState>, new_quorum: u32) {
             // added this assert so only can be called via multi sig funcionality
             // for example we have 4 signer and we can propose 3 man quorum.
-            self.assert_only_self();
+            // if i set this self.assert_only_self() here it would break the modularity principle
+            // so ill set it inside my main contract and this component already became internal
+            // by removing abi(embedv0) everything will work and modularity will be kept.
+            //self.assert_only_self();
             self._change_quorum(new_quorum);
         }
 
