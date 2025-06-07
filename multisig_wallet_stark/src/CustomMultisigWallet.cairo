@@ -6,7 +6,7 @@ pub type TransactionID = felt252;
 pub type TransactionState = multisig_wallet_stark::CustomInterfaceMultisigComponent::TransactionState;
 
 #[starknet::interface]
-pub trait IMultisigWallet<TContractState> {
+pub trait ICustomMultisigWallet<TContractState> {
     fn transfer_funds(ref self: TContractState, to: ContractAddress, amount: u256);
     fn get_quorum(self: @TContractState) -> u32;
     fn is_signer(self: @TContractState, signer: ContractAddress) -> bool;
@@ -59,7 +59,7 @@ mod CustomMultisigWallet {
     use multisig_wallet_stark::CustomMultisigComponent::MultisigComponent;
     use openzeppelin_token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
     use openzeppelin_access::ownable::OwnableComponent;
-    use super::{ContractAddress, IMultisigWallet,TransactionID,TransactionState,Call};
+    use super::{ContractAddress, ICustomMultisigWallet,TransactionID,TransactionState,Call};
     use starknet::storage::{ StoragePointerReadAccess,StoragePointerWriteAccess};
     
     use openzeppelin_governance::multisig::storage_utils::{SignersInfoStorePackingV2,TxInfoStorePacking};
@@ -101,7 +101,7 @@ mod CustomMultisigWallet {
     }
 
     #[abi(embed_v0)]
-    impl MultisigWalletImpl of IMultisigWallet<ContractState> {
+    impl CustomMultisigWalletImpl of ICustomMultisigWallet<ContractState> {
         // This function should be called via submit transaction --> multsig functionality.
         fn transfer_funds(ref self: ContractState, to: ContractAddress, amount: u256) {
             // below line will ensure that only the multisig can call this function.

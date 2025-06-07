@@ -4,7 +4,8 @@ use starknet::account::Call;
 pub type TransactionID = felt252;
 pub type TransactionState = multisig_wallet_stark::CustomInterfaceMultisigComponent::TransactionState;
 
-use multisig_wallet_stark::CustomMultisigWallet::{IMultisigWalletDispatcher,IMultisigWalletDispatcherTrait, };
+use multisig_wallet_stark::CustomMultisigWallet::{ICustomMultisigWalletDispatcher,
+                                                  ICustomMultisigWalletDispatcherTrait, };
 use openzeppelin_testing::declare_and_deploy;
 use openzeppelin_token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
 use openzeppelin_utils::serde::SerializedAppend;
@@ -64,7 +65,7 @@ fn deploy_mock_strktoken() -> IERC20Dispatcher{
 // By deploying owner has the priviliged to submit tx and tx batches.Rest of the 
 // elements completely carried on by multisig governance methodology.
 // change_quorum() function as well .
-fn deploy_custom_multisig_wallet() ->(IMultisigWalletDispatcher,IERC20Dispatcher){
+fn deploy_custom_multisig_wallet() ->(ICustomMultisigWalletDispatcher,IERC20Dispatcher){
    let strk_dispatcher = deploy_mock_strktoken();
     let mut calldata = array![];
     //initial quorum should be 1 cause we set 1 signer at a time.
@@ -80,7 +81,7 @@ fn deploy_custom_multisig_wallet() ->(IMultisigWalletDispatcher,IERC20Dispatcher
     strk_dispatcher.transfer(custom_multisig_wallet_address,INITIAL_RECIPIENT_SUPPLY);
     // wallet funded with INITIAL_RECIPIENT_SUPPLY and ready to be used 
     // Wallet dispatcher returned.
-    (IMultisigWalletDispatcher{contract_address:custom_multisig_wallet_address},strk_dispatcher)
+    (ICustomMultisigWalletDispatcher{contract_address:custom_multisig_wallet_address},strk_dispatcher)
 }
 
 #[test]
