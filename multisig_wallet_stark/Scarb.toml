@@ -18,9 +18,14 @@ openzeppelin_testing = "3.0.0"
 snforge_std = "0.41.0"
 assert_macros = "2.11.4"
 
+[profile.dev.cairo]
+unstable-add-statements-functions-debug-info = true
+unstable-add-statements-code-locations-debug-info = true
+inlining-strategy = "avoid"
 
 [[target.starknet-contract]]
-sierra = true
+casm = true
+
 
 [scripts]
 test = "snforge test"

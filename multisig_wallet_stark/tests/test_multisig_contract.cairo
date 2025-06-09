@@ -11,12 +11,17 @@ use openzeppelin_governance::multisig::interface::{
                              IMultisigDispatcherTrait};
 use openzeppelin_testing::declare_and_deploy;
 use openzeppelin_utils::serde::SerializedAppend;
-use snforge_std::{CheatSpan, cheat_caller_address};
+use snforge_std::{CheatSpan, cheat_caller_address,spy_events,EventSpyAssertionsTrait };
 
 
-const INITIAL_RECIPIENT_SUPPLY: u256 = 1_000_000_000_000_000_000_000; // 1000_STRK_IN_FRI
-const ONE_TOKEN_UNIT: u256 = 1_000_000_000_000_000_000; // 1_TOKE_UNIT_IN_FRI
-const TEN_TOKEN_UNIT: u256 = 10_000_000_000_000_000_000; // 10_TOKE_UNIT_IN_FRI
+use test_event_utils::{build_quorum_updated_event,
+                build_signer_events,
+                build_confirm_revoked_event,
+                build_tx_submitted_event,
+                build_tx_confirmed_event,
+                build_tx_executed_event,
+                build_signer_removed_event
+            };
 
 /// SIGNERS 
 const SIGNER1: ContractAddress = 'SIGNER1'.try_into().unwrap();
@@ -63,10 +68,18 @@ fn deploy_multisig_wallet() -> IMultisigDispatcher{
 }
 #[test]
 fn test_deploy_multisig(){
+    // lets set event observer;
+    let mut spy = spy_events();
     // test quorum and signers 
     let multisig_wallet_dispatcher = deploy_multisig_wallet();
     let signers = create_signers_array();
     let expected_quorum = signers.len();
+    // lets build events 
+    let signers_event = build_signer_events(signers.clone(),multisig_wallet_dispatcher.contract_address);
+    let quorum_update_event = build_quorum_updated_event(multisig_wallet_dispatcher.contract_address,0,expected_quorum);
+    // lets spy on those events.
+    spy.assert_emitted(@signers_event);
+    spy.assert_emitted(@quorum_update_event);
 
     let get_signers_array = multisig_wallet_dispatcher.get_signers();
     let current_quorum = multisig_wallet_dispatcher.get_quorum();
@@ -81,6 +94,8 @@ fn test_deploy_multisig(){
 
 #[test]
 fn test_single_transaction(){
+    // lets set event observer;
+    let mut spy = spy_events();
     // this test's demonstrates single transaction effects. 
     let multisig_wallet_dispatcher = deploy_multisig_wallet();
     let signers = create_signers_array();
@@ -94,7 +109,8 @@ fn test_single_transaction(){
     // lets submit the transaction
     cheat_caller_address(multisig_wallet_dispatcher.contract_address, *signers.at(0), CheatSpan::TargetCalls(1));
     let tx_id = multisig_wallet_dispatcher.submit_transaction(to,selector,calldata.span(),salt);
-
+    let tx_submitted_event = build_tx_submitted_event(multisig_wallet_dispatcher.contract_address,tx_id,*signers.at(0));
+    spy.assert_emitted(@tx_submitted_event);
     // check tx hashing 
     let tx_hash = multisig_wallet_dispatcher.hash_transaction(to,selector,calldata.span(),salt);
     assert_eq!(tx_hash,tx_id,"incorrect hashing!");
@@ -122,11 +138,13 @@ fn test_single_transaction(){
     multisig_wallet_dispatcher.revoke_confirmation(tx_id);
     let new_confrimation_count = multisig_wallet_dispatcher.get_transaction_confirmations(tx_id);
     assert_eq!(new_confrimation_count,signers.len()-1,"incorrect confirmation count!");
-
+    let revoke_event = build_confirm_revoked_event(multisig_wallet_dispatcher.contract_address,tx_id,*signers.at(0));
+    spy.assert_emitted(@revoke_event);
     // other signers beat up revoker and force him to confirm it😆😆😆
     cheat_caller_address(multisig_wallet_dispatcher.contract_address, *signers.at(0), CheatSpan::TargetCalls(1));
     multisig_wallet_dispatcher.confirm_transaction(tx_id);
-
+    let tx_confirmed_event = build_tx_confirmed_event(multisig_wallet_dispatcher.contract_address,tx_id,*signers.at(0));
+    spy.assert_emitted(@tx_confirmed_event);
     // tx confirmed but not executed yet.
     let is_executed = multisig_wallet_dispatcher.is_executed(tx_id);
     assert_eq!(is_executed,false,"incorrect execution state!");
@@ -134,7 +152,8 @@ fn test_single_transaction(){
     // after the confirmations we can execute tx by any of the signers.
     cheat_caller_address(multisig_wallet_dispatcher.contract_address, *signers.at(0), CheatSpan::TargetCalls(1));
     multisig_wallet_dispatcher.execute_transaction(to,selector,calldata.span(),salt);
-
+    let tx_executed_event = build_tx_executed_event(multisig_wallet_dispatcher.contract_address,tx_id);
+    spy.assert_emitted(@tx_executed_event);
     // after execution we can check our new quorum.
     let quorum = multisig_wallet_dispatcher.get_quorum();
     assert_eq!(new_quorum,quorum,"incorrect quorum!");
@@ -161,6 +180,8 @@ fn test_single_transaction(){
     // execute 
     cheat_caller_address(multisig_wallet_dispatcher.contract_address, *signers.at(0), CheatSpan::TargetCalls(1));
     multisig_wallet_dispatcher.execute_transaction(to,replace_signer_selector,replace_signer_calldata.span(),0);
+    let signer_removed_event = build_signer_removed_event(multisig_wallet_dispatcher.contract_address,old_signer);
+    spy.assert_emitted(@signer_removed_event);
     // test effect
     let get_latest_signers = multisig_wallet_dispatcher.get_signers();
     for i in 0..get_latest_signers.len(){
@@ -273,8 +294,132 @@ let signers = create_signers_array();
 cheat_caller_address(multisig_wallet_dispatcher.contract_address, *signers.at(0), CheatSpan::TargetCalls(2));
 let _ = multisig_wallet_dispatcher.confirm_transaction(0); // gonna fail
 }
-
 // ENDS HERE --------------------------------------------------------------------<
+
+mod test_event_utils{
+    use openzeppelin_governance::multisig::MultisigComponent::{Event as MultisigEvent,SignerAdded, 
+    QuorumUpdated,
+    SignerRemoved,
+    TransactionSubmitted,
+    TransactionConfirmed,
+    TransactionExecuted,
+    ConfirmationRevoked,
+    CallSalt};
+
+    use starknet::ContractAddress;
+
+    pub fn build_signer_events(
+    signers: Array<ContractAddress>,
+    contract: ContractAddress,
+) -> Array<(ContractAddress, MultisigEvent)> {
+    let mut arr = array![];
+
+    for i in 0..signers.len() {
+        arr.append((
+            contract,
+            MultisigEvent::SignerAdded(SignerAdded {
+                signer: *signers.at(i),
+            }),
+        ));
+    }
+
+    arr
+}
+
+pub fn build_quorum_updated_event(
+    contract: ContractAddress,
+    old: u32,
+    new: u32,
+) -> Array<(ContractAddress, MultisigEvent)> {
+    array![(
+        contract,
+        MultisigEvent::QuorumUpdated(QuorumUpdated {
+            old_quorum: old,
+            new_quorum: new,
+        }),
+    )]
+}
+
+pub fn build_signer_removed_event(
+    contract: ContractAddress,
+    removed_signer: ContractAddress
+) -> Array<(ContractAddress, MultisigEvent)> {
+    array![(
+        contract,
+        MultisigEvent::SignerRemoved(SignerRemoved {
+           signer:removed_signer
+        }),
+    )]
+}
+
+pub fn build_tx_submitted_event(
+    contract: ContractAddress,
+    tx_id:felt252,
+    signer: ContractAddress
+) -> Array<(ContractAddress, MultisigEvent)> {
+    array![(
+        contract,
+        MultisigEvent::TransactionSubmitted(TransactionSubmitted {
+           id:tx_id,
+           signer:signer
+        }),
+    )]
+}
+
+pub fn build_tx_confirmed_event(
+    contract: ContractAddress,
+    tx_id:felt252,
+    signer: ContractAddress
+) -> Array<(ContractAddress, MultisigEvent)> {
+    array![(
+        contract,
+        MultisigEvent::TransactionConfirmed (TransactionConfirmed  {
+           id:tx_id,
+           signer:signer
+        }),
+    )]
+}
+
+pub fn build_confirm_revoked_event(
+    contract: ContractAddress,
+    tx_id:felt252,
+    signer: ContractAddress
+) -> Array<(ContractAddress, MultisigEvent)> {
+    array![(
+        contract,
+        MultisigEvent::ConfirmationRevoked  (ConfirmationRevoked   {
+           id:tx_id,
+           signer:signer
+        }),
+    )]
+}
+
+pub fn build_tx_executed_event(
+    contract: ContractAddress,
+    tx_id:felt252
+) -> Array<(ContractAddress, MultisigEvent)> {
+    array![(
+        contract,
+        MultisigEvent::TransactionExecuted   (TransactionExecuted    {
+           id:tx_id   
+        }),
+    )]
+}
+// event CallSalt for non-zero salt.
+pub fn build_call_salt_event(
+    contract: ContractAddress,
+    tx_id:felt252,
+    salt:felt252
+) -> Array<(ContractAddress, MultisigEvent)> {
+    array![(
+        contract,
+        MultisigEvent::CallSalt(CallSalt{
+           id:tx_id,
+           salt:salt   
+        }),
+    )]
+}
+}
 
 // pub trait IMultisig<TState> {
 //  ✅ fn get_quorum(self: @TState) -> u32;

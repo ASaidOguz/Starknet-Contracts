@@ -10,9 +10,7 @@ use core::traits::TryInto;
 // ADD THESE IMPORTS for your counter reader dispatcher
 use erc721_stark::Erc721Nft::ICounterReaderDispatcher;
 use erc721_stark::Erc721Nft::ICounterReaderDispatcherTrait;
-
-
-
+use erc721_stark::components::Counter::{ICounterDispatcher,ICounterDispatcherTrait};
 
 // OpenZeppelin ERC721 interfaces and their dispatchers
 use openzeppelin_token::erc721::interface::IERC721Dispatcher;
@@ -251,4 +249,22 @@ fn test_safe_transfer_from_to_non_receiver_contract_fails() {
     // because mock_simple doesn't implement IERC721Receiver
     cheat_caller_address(contract.contract_address, ALICE, CheatSpan::TargetCalls(1)); 
     ierc721_dispatcher.safe_transfer_from(ALICE, mock_simple, nft_id, array![].span());
+}
+
+#[test]
+#[ignore]
+#[should_panic(expected: 'ERC721: token already minted')]
+fn test_proof_of_concept(){
+    // This test is poc(proof of concept for vulnaerability originated by counter abi expose )
+    // remove comment line from abi embed of CounterImpl  
+    //  run via "snforge test --ignored"
+    
+    // deploy and mint for Alice.
+    let contract = deploy(OWNER);
+    let ipfs_hash:ByteArray="QmVsC32PYDe1cM9zoA8JMninKjeFmHB4xRXi1As2vrv5or";
+    let _=contract.mint_item(ALICE,ipfs_hash.clone());
+    let counter_dispatcher = ICounterDispatcher{ contract_address: contract.contract_address };
+    counter_dispatcher.decrement();
+    // this should panic cause contract cant contain already used element.
+    let _ = contract.mint_item(BOB,ipfs_hash.clone());
 }
