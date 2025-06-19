@@ -150,7 +150,6 @@ deploy_sepolia_UltraStarknetHonkVerifier: ## Deploy UltraStarknetHonkVerifier co
 	fi
 	$(eval CLASS_HASH := $(shell jq -r '.class_hash' deployments/sepolia/sepolia/UltraStarknetHonkVerifier.json))
 	@output=$$(sncast --account=sepolia deploy \
-		--arguments $(ARGUMENTS) \
 		--class-hash=$(CLASS_HASH) \
 		--network sepolia \
 		--salt=5 \
@@ -172,6 +171,20 @@ verify_proof:
 
 	@sncast --profile=devnet call \
 		--contract-address $(CONTRACT_ADDRESS) \
+		--function verify_ultra_starknet_honk_proof \
+		--calldata $$(cat calldata.txt) > tmp_output.txt
+
+	@node -e "const fs = require('fs'); const lines = fs.readFileSync('tmp_output.txt', 'utf-8').trim().split('\n'); const json = { call_output: lines }; fs.writeFileSync('proof_output.json', JSON.stringify(json, null, 2));"
+
+	@rm -f tmp_output.txt
+verify_proof_sepolia:
+	@echo "Verifying Proof by UltraStarknetHonkVerifier (local)..."
+	$(eval CONTRACT_ADDRESS := $(shell jq -r '.contract_address' deployments/sepolia/sepolia/UltraStarknetHonkVerifier.deployment.json))
+	jq -r '.[] | if (type == "string" and startswith("0x")) then tonumber else . end' ./../target/calldata.json | tr '\n' ' ' > calldata.txt
+
+	@sncast --account=sepolia call \
+		--contract-address $(CONTRACT_ADDRESS) \
+		--network sepolia \
 		--function verify_ultra_starknet_honk_proof \
 		--calldata $$(cat calldata.txt) > tmp_output.txt
 
