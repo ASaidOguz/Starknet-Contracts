@@ -4,7 +4,7 @@
 - It can check for signature mallability. 
 - You can use [bb backend](https://github.com/AztecProtocol/aztec-packages/blob/master/barretenberg/bbup/README.md) engine cli too.
 - Can be easly tested with mallable signature input -> input_mal.txt just change it via generate_input.sh and run (Has already check function for this)
-
+- need [noir lang](https://noir-lang.org/docs/getting_started/quick_start) for the project 
 ```
 nargo execute 
 ```
