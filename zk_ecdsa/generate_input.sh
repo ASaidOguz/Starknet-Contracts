@@ -1,6 +1,6 @@
 #!/bin/bash
 # change input to input_mal to use dirty signature.
-input_file="inputs.txt" # Your original input source (e.g., key=value pairs)
+input_file="input_mal.txt" # Your original input source (e.g., key=value pairs)
 output_toml_file="Prover.toml"
 output_json_file="inputs.json" # New: for JavaScript consumption
 

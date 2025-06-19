@@ -2,13 +2,12 @@
 
 - Using starknet garaga for ecdsa verification
 - It can check for signature mallability. 
-- Can be easly tested with mallable signature input -> input_mal.txt just change it via generate_input.sh and run
+- Can be easly tested with mallable signature input -> input_mal.txt just change it via generate_input.sh and run (Has already check function for this)
 
 ```
 nargo execute 
 ```
 
-![Sig-Mal](./images/Ekran%20Alıntısı.PNG)
 
 - [Garaga starknet](https://garaga.gitbook.io/garaga/smart-contract-generators/noir)
 
