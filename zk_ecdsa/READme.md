@@ -37,13 +37,13 @@ cd Starknet-Contracts/zk_ecdsa
 yarn install
 ```
 
-- We have already calldata exist in repo but you can create your own by popoulating inputs.txt and then run
+- You can create your own (verification key)  vk-calldata by popoulating inputs.txt and then run
 
 ```
 ./generate_input.sh
 ```
 
-this will generate inputs for the circuit and then run the generate_vk-calldata.js to procure the calldata 
+this will generate inputs for the circuit and then run the generate_vk-calldata.js to procure the calldata vk
 for starknet verifier.
 ```
 node  generate_vk-calldata.js
@@ -81,6 +81,6 @@ You can parse response with response-check.js
 ```
 node response-check.js 
 ```
- just read the comment and everything will be succesful you will see this screen
+ just read the comments for more info in code and if everything is succesful you will see this screen
 
 ![final-screen](./images/Ekran%20Alıntısı.PNG)
