@@ -10,7 +10,7 @@ nargo execute
 ```
 
 
-- [Garaga starknet](https://garaga.gitbook.io/garaga/smart-contract-generators/noir)
+- You can learn more about zk-verifiers from [Garaga starknet](https://garaga.gitbook.io/garaga/smart-contract-generators/noir)
 
 
 
@@ -47,11 +47,6 @@ node  generate_vk-calldata.js
 
 After calldata generation just move to zk_sig_verify folder and run (assume you have already [starknet-foundry](https://foundry-rs.github.io/starknet-foundry/) and [scarb](https://foundry-rs.github.io/starknet-foundry/getting-started/scarb.html) and [starknet-devnet](https://0xspaceshard.github.io/starknet-devnet/docs/running/install))
 
-For generating starknet verifier from scratch u can do it by running garaga line
-
-```
-garaga gen --system ultra_starknet_honk --vk target/vk
-```
 
 - start local chain
 ```
