@@ -2,17 +2,45 @@ import fs from 'fs/promises';
 import path from 'path';
 
 // The response received from the Starknet contract call
-const contractResponse = [
-  0x0, 0x20, 0xee, 0x0, 0x55, 0x0, 0xc9, 0x0, 0x9d, 0x0, 0x12, 0x0, 0x79, 0x0, 0xc9, 0x0, 0x7a, 0x0, 0x7, 0x0,
-  0xb7, 0x0, 0x7e, 0x0, 0x8a, 0x0, 0xd6, 0x0, 0x2e, 0x0, 0xa2, 0x0, 0x44, 0x0, 0xff, 0x0, 0x37, 0x0, 0xf9, 0x0,
-  0xad, 0x0, 0xee, 0x0, 0xf1, 0x0, 0x67, 0x0, 0x5c, 0x0, 0x76, 0x0, 0x26, 0x0, 0x43, 0x0, 0xf2, 0x0, 0x2c, 0x0,
-  0x4, 0x0, 0x34, 0x0, 0x54, 0x0
-];
 
+const  expectedSpanLengthFromResponse =32;
+
+let contractResponse;
+try {
+    const proofContent = await fs.readFile('./proof_output.json', 'utf-8');
+    const parsedProof = JSON.parse(proofContent);
+
+    // Find the response line
+    const responseLine = parsedProof.call_output.find(line => line.startsWith('response:'));
+
+    if (!responseLine) {
+      throw new Error("No 'response' line found in proof_output.json");
+    }
+
+    // Extract array content from: 'response: [0x0, 0x20, ...]'
+    const hexArrayStr = responseLine.match(/\[(.*?)\]/)?.[1];
+
+    if (!hexArrayStr) {
+      throw new Error("Could not extract array from response line");
+    }
+
+    // Split and convert to integers
+    contractResponse = hexArrayStr
+      .split(',')
+      .map(hex => parseInt(hex.trim(), 16));
+
+    console.log("Parsed proof output:", contractResponse);
+
+    // Optionally export, or use further
+    // module.exports = contractResponse;
+} catch (error) {
+  console.error(`Error loading or parsing proof_output.json: ${error.message}`);
+  
+}
 // Assuming the format: [is_some, length, item1, item2, ..., itemN]
 // Let's assume 0x0 is "Some", and 0x20 is the *number of public outputs*, not necessarily the byte length.
 // The `actual response data length 64` suggests `contractResponse.slice(2)` has 64 elements.
-const expectedSpanLengthFromResponse = contractResponse[1]; // Should be 32 (0x20)
+ // Should be 32 (0x20)
 const responseData = contractResponse.slice(2); // The actual data received from the verifier
 
 async function compareHashedMessage() {

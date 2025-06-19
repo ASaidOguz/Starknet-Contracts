@@ -7,7 +7,7 @@ version = "0.18.0"
 source = "git+https://github.com/keep-starknet-strange/garaga.git?tag=v0.18.0#1582fded827165532bebccc8a4b312058e5b34ca"
 
 [[package]]
-name = "zk_sig_verify"
+name = "zk_ecdsa_verify"
 version = "0.1.0"
 dependencies = [
  "garaga",

@@ -169,4 +169,12 @@ verify_proof:
 	@echo "Verifying Proof by UltraStarknetHonkVerifier (local)..."
 	$(eval CONTRACT_ADDRESS := $(shell jq -r '.contract_address' deployments/devnet/local/UltraStarknetHonkVerifier.deployment.json))
 	jq -r '.[] | if (type == "string" and startswith("0x")) then tonumber else . end' ./../target/calldata.json | tr '\n' ' ' > calldata.txt
-	sncast --profile=devnet call --contract-address $(CONTRACT_ADDRESS) --function verify_ultra_starknet_honk_proof --calldata $$(cat calldata.txt)
+
+	@sncast --profile=devnet call \
+		--contract-address $(CONTRACT_ADDRESS) \
+		--function verify_ultra_starknet_honk_proof \
+		--calldata $$(cat calldata.txt) > tmp_output.txt
+
+	@node -e "const fs = require('fs'); const lines = fs.readFileSync('tmp_output.txt', 'utf-8').trim().split('\n'); const json = { call_output: lines }; fs.writeFileSync('proof_output.json', JSON.stringify(json, null, 2));"
+
+	@rm -f tmp_output.txt

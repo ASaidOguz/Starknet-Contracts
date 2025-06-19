@@ -3,7 +3,6 @@
 .DS_Store
 target/*
 */DS_Store
-inputs.txt
 Prover.toml
 target
 node_modules
