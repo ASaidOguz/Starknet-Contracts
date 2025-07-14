@@ -16,22 +16,31 @@ openzeppelin_token = "1.0.0"
 openzeppelin_utils = "1.0.0"
 openzeppelin_testing = "3.0.0"
 snforge_std = "0.41.0"
-assert_macros = "2.11.4"
+assert_macros = "2.9.4"
+
+[[target.starknet-contract]]
+casm = true # taggle this to `false` to speed up compilation/script tests
+
+[tool.scarb]
+allow-prebuilt-plugins = [
+	"snforge_std",
+] # Avoids the need to install Rust for snforge_std/starknet-foundry
+
+[scripts]
+test = "snforge test"
+
+[tool.fmt]
+sort-module-level-items = true
 
 [profile.dev.cairo]
 unstable-add-statements-functions-debug-info = true
 unstable-add-statements-code-locations-debug-info = true
 inlining-strategy = "avoid"
 
-[[target.starknet-contract]]
-casm = true
-
-
-[scripts]
-test = "snforge test"
-
-[tool.scarb]
-allow-prebuilt-plugins = ["snforge_std"]
+[[tool.snforge.fork]]
+name = "SEPOLIA_LATEST"
+url = "https://starknet-sepolia.public.blastapi.io/rpc/v0_8"
+block_id.tag = "latest"
 
 # Visit https://foundry-rs.github.io/starknet-foundry/appendix/scarb-toml.html for more information
 

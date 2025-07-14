@@ -13,6 +13,27 @@ inlining-strategy = 2
 
 [dev-dependencies]
 cairo_test = "2.11.4"
+openzeppelin_utils = "1.0.0"
+openzeppelin_testing = "3.0.0"
+snforge_std = "0.41.0"
+assert_macros = "2.11.4"
+
+[tool.scarb]
+allow-prebuilt-plugins = [
+	"snforge_std",
+] # Avoids the need to install Rust for snforge_std/starknet-foundry
+
+[scripts]
+test = "snforge test"
+
+[tool.fmt]
+sort-module-level-items = true
+
+# This part added for coverage report generating.(lcov file)
+[profile.dev.cairo]
+unstable-add-statements-functions-debug-info = true
+unstable-add-statements-code-locations-debug-info = true
+inlining-strategy = "avoid"
 
 [[target.starknet-contract]]
 casm = true

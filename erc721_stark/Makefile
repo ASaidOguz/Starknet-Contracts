@@ -151,7 +151,7 @@ deploy_sepolia_Erc721Nft: ## Deploy Erc721Nft contract on Sepolia testnet (use A
 	fi
 	$(eval CLASS_HASH := $(shell jq -r '.class_hash' deployments/sepolia/sepolia/Erc721Nft.json))
 	@output=$$(sncast --account=sepolia deploy \
-		--arguments $(ARGUMENTS) \
+		--arguments $(OWNER),'"$(NAME)"'\
 		--class-hash=$(CLASS_HASH) \
 		--network sepolia \
 		--salt=5 \

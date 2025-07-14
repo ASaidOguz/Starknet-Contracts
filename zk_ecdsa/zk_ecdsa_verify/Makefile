@@ -191,3 +191,13 @@ verify_proof_sepolia:
 	@node -e "const fs = require('fs'); const lines = fs.readFileSync('tmp_output.txt', 'utf-8').trim().split('\n'); const json = { call_output: lines }; fs.writeFileSync('proof_output.json', JSON.stringify(json, null, 2));"
 
 	@rm -f tmp_output.txt
+
+format_calldata: ## Format calldata.txt from space-separated to newline-separated for Cairo tests
+	@echo "Formatting calldata for Cairo tests..."
+	@if [ ! -f "calldata.txt" ]; then \
+		echo "❌ calldata.txt not found. Please ensure calldata.txt exists."; \
+		exit 1; \
+	fi
+	@tr ' ' '\n' < calldata.txt > calldata_formatted.txt
+	@echo "✅ Formatted calldata saved to calldata_formatted.txt"
+	@echo "Lines in formatted file: $$(wc -l < calldata_formatted.txt)"

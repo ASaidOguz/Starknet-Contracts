@@ -12,7 +12,7 @@ pub trait IUltraStarknetHonkVerifier<TContractState> {
 }
 
 #[starknet::contract]
-mod UltraStarknetHonkVerifier {
+pub mod UltraStarknetHonkVerifier {
     use core::num::traits::Zero;
     use core::poseidon::hades_permutation;
     use garaga::circuits::ec;
