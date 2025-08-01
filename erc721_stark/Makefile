@@ -79,93 +79,6 @@ test_coverage: ## Generate test coverage report and open in browser
 clear_coverage: ## Clean coverage data
 	cairo-coverage clean
 
-# Declare and Deploy targets for Erc721Nft
-
-declare_local_Erc721Nft: ## Declare Erc721Nft contract on local devnet
-	@echo "Declaring Erc721Nft (local)..."
-	@mkdir -p deployments/devnet/local
-	@if sncast --profile=devnet declare --contract-name=Erc721Nft > tmp_declare_output.txt 2>&1; then \
-		class_hash=$$(grep -o 'class_hash: 0x[0-9a-fA-F]*' tmp_declare_output.txt | cut -d ' ' -f2); \
-		if [ -n "$$class_hash" ]; then \
-			timestamp=$$(date +%s); \
-			printf '{"class_hash": "%s", "contract_name": "%s", "timestamp": %s}\n' "$$class_hash" "Erc721Nft" "$$timestamp" > deployments/devnet/local/Erc721Nft.json; \
-			echo "✅ Saved class hash: $$class_hash to deployments/devnet/local/Erc721Nft.json"; \
-		else \
-			echo "❌ Failed to extract class hash from output"; \
-			cat tmp_declare_output.txt; \
-		fi; \
-	else \
-		echo "❌ Declaration failed for Erc721Nft"; \
-		cat tmp_declare_output.txt; \
-	fi; \
-	rm -f tmp_declare_output.txt
-
-declare_sepolia_Erc721Nft: ## Declare Erc721Nft contract on Sepolia testnet
-	@echo "Declaring Erc721Nft (sepolia)..."
-	@mkdir -p deployments/sepolia/sepolia
-	@if sncast --account=sepolia declare --contract-name=Erc721Nft --network sepolia > tmp_declare_output.txt 2>&1; then \
-		class_hash=$$(grep -o 'class_hash: 0x[0-9a-fA-F]*' tmp_declare_output.txt | cut -d ' ' -f2); \
-		if [ -n "$$class_hash" ]; then \
-			timestamp=$$(date +%s); \
-			printf '{"class_hash": "%s", "contract_name": "%s", "timestamp": %s}\n' "$$class_hash" "Erc721Nft" "$$timestamp" > deployments/sepolia/sepolia/Erc721Nft.json; \
-			echo "✅ Saved class hash: $$class_hash to deployments/sepolia/sepolia/Erc721Nft.json"; \
-		else \
-			echo "❌ Failed to extract class hash from output"; \
-			cat tmp_declare_output.txt; \
-		fi; \
-	else \
-		echo "❌ Declaration failed for Erc721Nft"; \
-		cat tmp_declare_output.txt; \
-	fi; \
-	rm -f tmp_declare_output.txt
-
-deploy_local_Erc721Nft: ## Deploy Erc721Nft contract on local devnet (use ARGUMENTS='arg1 arg2' for constructor args)
-	@echo "Deploying Erc721Nft (local)..."
-	@mkdir -p deployments/devnet/local
-	@if [ ! -f "deployments/devnet/local/Erc721Nft.json" ]; then \
-		echo "❌ Class hash file not found. Please declare the contract first with: make declare_local_Erc721Nft"; \
-		exit 1; \
-	fi
-	$(eval CLASS_HASH := $(shell jq -r '.class_hash' deployments/devnet/local/Erc721Nft.json))
-	@output=$$(sncast --profile=devnet deploy \
-		--arguments $(ARGUMENTS) \
-		--class-hash=$(CLASS_HASH) \
-		--salt=5 \
-		); \
-	contract_address=$$(echo "$$output" | grep "contract_address:" | awk '{print $$2}'); \
-	transaction_hash=$$(echo "$$output" | grep "transaction_hash:" | awk '{print $$2}'); \
-	timestamp=$$(date +%s); \
-	printf '{"contract_address": "%s", "transaction_hash": "%s", "class_hash": "%s", "contract_name": "%s", "timestamp": %s}\n' "$$contract_address" "$$transaction_hash" "$(CLASS_HASH)" "Erc721Nft" "$$timestamp" > deployments/devnet/local/Erc721Nft.deployment.json; \
-	echo "✅ Deployed Erc721Nft successfully!"; \
-	echo "Contract Address: $$contract_address"; \
-	echo "Transaction Hash: $$transaction_hash"; \
-	echo "Deployment saved to: deployments/devnet/local/Erc721Nft.deployment.json"; \
-	echo "$$output"
-
-deploy_sepolia_Erc721Nft: ## Deploy Erc721Nft contract on Sepolia testnet (use ARGUMENTS='arg1 arg2' for constructor args)
-	@echo "Deploying Erc721Nft (sepolia)..."
-	@mkdir -p deployments/sepolia/sepolia
-	@if [ ! -f "deployments/sepolia/sepolia/Erc721Nft.json" ]; then \
-		echo "❌ Class hash file not found. Please declare the contract first with: make declare_sepolia_Erc721Nft"; \
-		exit 1; \
-	fi
-	$(eval CLASS_HASH := $(shell jq -r '.class_hash' deployments/sepolia/sepolia/Erc721Nft.json))
-	@output=$$(sncast --account=sepolia deploy \
-		--arguments $(OWNER),'"$(NAME)"'\
-		--class-hash=$(CLASS_HASH) \
-		--network sepolia \
-		--salt=5 \
-		); \
-	contract_address=$$(echo "$$output" | grep "contract_address:" | awk '{print $$2}'); \
-	transaction_hash=$$(echo "$$output" | grep "transaction_hash:" | awk '{print $$2}'); \
-	timestamp=$$(date +%s); \
-	printf '{"contract_address": "%s", "transaction_hash": "%s", "class_hash": "%s", "contract_name": "%s", "timestamp": %s}\n' "$$contract_address" "$$transaction_hash" "$(CLASS_HASH)" "Erc721Nft" "$$timestamp" > deployments/sepolia/sepolia/Erc721Nft.deployment.json; \
-	echo "✅ Deployed Erc721Nft successfully!"; \
-	echo "Contract Address: $$contract_address"; \
-	echo "Transaction Hash: $$transaction_hash"; \
-	echo "Deployment saved to: deployments/sepolia/sepolia/Erc721Nft.deployment.json"; \
-	echo "$$output"
-
 # Declare and Deploy targets for MockSimpleContract
 
 declare_local_MockSimpleContract: ## Declare MockSimpleContract contract on local devnet
@@ -251,6 +164,180 @@ deploy_sepolia_MockSimpleContract: ## Deploy MockSimpleContract contract on Sepo
 	echo "Contract Address: $$contract_address"; \
 	echo "Transaction Hash: $$transaction_hash"; \
 	echo "Deployment saved to: deployments/sepolia/sepolia/MockSimpleContract.deployment.json"; \
+	echo "$$output"
+
+# Declare and Deploy targets for NftFactory
+
+declare_local_NftFactory: ## Declare NftFactory contract on local devnet
+	@echo "Declaring NftFactory (local)..."
+	@mkdir -p deployments/devnet/local
+	@if sncast --profile=devnet declare --contract-name=NftFactory > tmp_declare_output.txt 2>&1; then \
+		class_hash=$$(grep -o 'class_hash: 0x[0-9a-fA-F]*' tmp_declare_output.txt | cut -d ' ' -f2); \
+		if [ -n "$$class_hash" ]; then \
+			timestamp=$$(date +%s); \
+			printf '{"class_hash": "%s", "contract_name": "%s", "timestamp": %s}\n' "$$class_hash" "NftFactory" "$$timestamp" > deployments/devnet/local/NftFactory.json; \
+			echo "✅ Saved class hash: $$class_hash to deployments/devnet/local/NftFactory.json"; \
+		else \
+			echo "❌ Failed to extract class hash from output"; \
+			cat tmp_declare_output.txt; \
+		fi; \
+	else \
+		echo "❌ Declaration failed for NftFactory"; \
+		cat tmp_declare_output.txt; \
+	fi; \
+	rm -f tmp_declare_output.txt
+
+declare_sepolia_NftFactory: ## Declare NftFactory contract on Sepolia testnet
+	@echo "Declaring NftFactory (sepolia)..."
+	@mkdir -p deployments/sepolia/sepolia
+	@if sncast --account=sepolia declare --contract-name=NftFactory --network sepolia > tmp_declare_output.txt 2>&1; then \
+		class_hash=$$(grep -o 'class_hash: 0x[0-9a-fA-F]*' tmp_declare_output.txt | cut -d ' ' -f2); \
+		if [ -n "$$class_hash" ]; then \
+			timestamp=$$(date +%s); \
+			printf '{"class_hash": "%s", "contract_name": "%s", "timestamp": %s}\n' "$$class_hash" "NftFactory" "$$timestamp" > deployments/sepolia/sepolia/NftFactory.json; \
+			echo "✅ Saved class hash: $$class_hash to deployments/sepolia/sepolia/NftFactory.json"; \
+		else \
+			echo "❌ Failed to extract class hash from output"; \
+			cat tmp_declare_output.txt; \
+		fi; \
+	else \
+		echo "❌ Declaration failed for NftFactory"; \
+		cat tmp_declare_output.txt; \
+	fi; \
+	rm -f tmp_declare_output.txt
+
+deploy_local_NftFactory: ## Deploy NftFactory contract on local devnet (use ARGUMENTS='arg1 arg2' for constructor args)
+	@echo "Deploying NftFactory (local)..."
+	@mkdir -p deployments/devnet/local
+	@if [ ! -f "deployments/devnet/local/NftFactory.json" ]; then \
+		echo "❌ Class hash file not found. Please declare the contract first with: make declare_local_NftFactory"; \
+		exit 1; \
+	fi
+	$(eval CLASS_HASH := $(shell jq -r '.class_hash' deployments/devnet/local/NftFactory.json))
+	@output=$$(sncast --profile=devnet deploy \
+		--arguments $(ARGUMENTS) \
+		--class-hash=$(CLASS_HASH) \
+		--salt=5 \
+		); \
+	contract_address=$$(echo "$$output" | grep "contract_address:" | awk '{print $$2}'); \
+	transaction_hash=$$(echo "$$output" | grep "transaction_hash:" | awk '{print $$2}'); \
+	timestamp=$$(date +%s); \
+	printf '{"contract_address": "%s", "transaction_hash": "%s", "class_hash": "%s", "contract_name": "%s", "timestamp": %s}\n' "$$contract_address" "$$transaction_hash" "$(CLASS_HASH)" "NftFactory" "$$timestamp" > deployments/devnet/local/NftFactory.deployment.json; \
+	echo "✅ Deployed NftFactory successfully!"; \
+	echo "Contract Address: $$contract_address"; \
+	echo "Transaction Hash: $$transaction_hash"; \
+	echo "Deployment saved to: deployments/devnet/local/NftFactory.deployment.json"; \
+	echo "$$output"
+
+deploy_sepolia_NftFactory: ## Deploy NftFactory contract on Sepolia testnet (use ARGUMENTS='arg1 arg2' for constructor args)
+	@echo "Deploying NftFactory (sepolia)..."
+	@mkdir -p deployments/sepolia/sepolia
+	@if [ ! -f "deployments/sepolia/sepolia/NftFactory.json" ]; then \
+		echo "❌ Class hash file not found. Please declare the contract first with: make declare_sepolia_NftFactory"; \
+		exit 1; \
+	fi
+	$(eval CLASS_HASH := $(shell jq -r '.class_hash' deployments/sepolia/sepolia/NftFactory.json))
+	@output=$$(sncast --account=sepolia deploy \
+		--arguments $(ARGUMENTS) \
+		--class-hash=$(CLASS_HASH) \
+		--network sepolia \
+		--salt=5 \
+		); \
+	contract_address=$$(echo "$$output" | grep "contract_address:" | awk '{print $$2}'); \
+	transaction_hash=$$(echo "$$output" | grep "transaction_hash:" | awk '{print $$2}'); \
+	timestamp=$$(date +%s); \
+	printf '{"contract_address": "%s", "transaction_hash": "%s", "class_hash": "%s", "contract_name": "%s", "timestamp": %s}\n' "$$contract_address" "$$transaction_hash" "$(CLASS_HASH)" "NftFactory" "$$timestamp" > deployments/sepolia/sepolia/NftFactory.deployment.json; \
+	echo "✅ Deployed NftFactory successfully!"; \
+	echo "Contract Address: $$contract_address"; \
+	echo "Transaction Hash: $$transaction_hash"; \
+	echo "Deployment saved to: deployments/sepolia/sepolia/NftFactory.deployment.json"; \
+	echo "$$output"
+
+# Declare and Deploy targets for Erc721Nft
+
+declare_local_Erc721Nft: ## Declare Erc721Nft contract on local devnet
+	@echo "Declaring Erc721Nft (local)..."
+	@mkdir -p deployments/devnet/local
+	@if sncast --profile=devnet declare --contract-name=Erc721Nft > tmp_declare_output.txt 2>&1; then \
+		class_hash=$$(grep -o 'class_hash: 0x[0-9a-fA-F]*' tmp_declare_output.txt | cut -d ' ' -f2); \
+		if [ -n "$$class_hash" ]; then \
+			timestamp=$$(date +%s); \
+			printf '{"class_hash": "%s", "contract_name": "%s", "timestamp": %s}\n' "$$class_hash" "Erc721Nft" "$$timestamp" > deployments/devnet/local/Erc721Nft.json; \
+			echo "✅ Saved class hash: $$class_hash to deployments/devnet/local/Erc721Nft.json"; \
+		else \
+			echo "❌ Failed to extract class hash from output"; \
+			cat tmp_declare_output.txt; \
+		fi; \
+	else \
+		echo "❌ Declaration failed for Erc721Nft"; \
+		cat tmp_declare_output.txt; \
+	fi; \
+	rm -f tmp_declare_output.txt
+
+declare_sepolia_Erc721Nft: ## Declare Erc721Nft contract on Sepolia testnet
+	@echo "Declaring Erc721Nft (sepolia)..."
+	@mkdir -p deployments/sepolia/sepolia
+	@if sncast --account=sepolia declare --contract-name=Erc721Nft --network sepolia > tmp_declare_output.txt 2>&1; then \
+		class_hash=$$(grep -o 'class_hash: 0x[0-9a-fA-F]*' tmp_declare_output.txt | cut -d ' ' -f2); \
+		if [ -n "$$class_hash" ]; then \
+			timestamp=$$(date +%s); \
+			printf '{"class_hash": "%s", "contract_name": "%s", "timestamp": %s}\n' "$$class_hash" "Erc721Nft" "$$timestamp" > deployments/sepolia/sepolia/Erc721Nft.json; \
+			echo "✅ Saved class hash: $$class_hash to deployments/sepolia/sepolia/Erc721Nft.json"; \
+		else \
+			echo "❌ Failed to extract class hash from output"; \
+			cat tmp_declare_output.txt; \
+		fi; \
+	else \
+		echo "❌ Declaration failed for Erc721Nft"; \
+		cat tmp_declare_output.txt; \
+	fi; \
+	rm -f tmp_declare_output.txt
+
+deploy_local_Erc721Nft: ## Deploy Erc721Nft contract on local devnet (use ARGUMENTS='arg1 arg2' for constructor args)
+	@echo "Deploying Erc721Nft (local)..."
+	@mkdir -p deployments/devnet/local
+	@if [ ! -f "deployments/devnet/local/Erc721Nft.json" ]; then \
+		echo "❌ Class hash file not found. Please declare the contract first with: make declare_local_Erc721Nft"; \
+		exit 1; \
+	fi
+	$(eval CLASS_HASH := $(shell jq -r '.class_hash' deployments/devnet/local/Erc721Nft.json))
+	@output=$$(sncast --profile=devnet deploy \
+		--arguments $(ARGUMENTS) \
+		--class-hash=$(CLASS_HASH) \
+		--salt=5 \
+		); \
+	contract_address=$$(echo "$$output" | grep "contract_address:" | awk '{print $$2}'); \
+	transaction_hash=$$(echo "$$output" | grep "transaction_hash:" | awk '{print $$2}'); \
+	timestamp=$$(date +%s); \
+	printf '{"contract_address": "%s", "transaction_hash": "%s", "class_hash": "%s", "contract_name": "%s", "timestamp": %s}\n' "$$contract_address" "$$transaction_hash" "$(CLASS_HASH)" "Erc721Nft" "$$timestamp" > deployments/devnet/local/Erc721Nft.deployment.json; \
+	echo "✅ Deployed Erc721Nft successfully!"; \
+	echo "Contract Address: $$contract_address"; \
+	echo "Transaction Hash: $$transaction_hash"; \
+	echo "Deployment saved to: deployments/devnet/local/Erc721Nft.deployment.json"; \
+	echo "$$output"
+
+deploy_sepolia_Erc721Nft: ## Deploy Erc721Nft contract on Sepolia testnet (use ARGUMENTS='arg1 arg2' for constructor args)
+	@echo "Deploying Erc721Nft (sepolia)..."
+	@mkdir -p deployments/sepolia/sepolia
+	@if [ ! -f "deployments/sepolia/sepolia/Erc721Nft.json" ]; then \
+		echo "❌ Class hash file not found. Please declare the contract first with: make declare_sepolia_Erc721Nft"; \
+		exit 1; \
+	fi
+	$(eval CLASS_HASH := $(shell jq -r '.class_hash' deployments/sepolia/sepolia/Erc721Nft.json))
+	@output=$$(sncast --account=sepolia deploy \
+		--arguments $(ARGUMENTS) \
+		--class-hash=$(CLASS_HASH) \
+		--network sepolia \
+		--salt=5 \
+		); \
+	contract_address=$$(echo "$$output" | grep "contract_address:" | awk '{print $$2}'); \
+	transaction_hash=$$(echo "$$output" | grep "transaction_hash:" | awk '{print $$2}'); \
+	timestamp=$$(date +%s); \
+	printf '{"contract_address": "%s", "transaction_hash": "%s", "class_hash": "%s", "contract_name": "%s", "timestamp": %s}\n' "$$contract_address" "$$transaction_hash" "$(CLASS_HASH)" "Erc721Nft" "$$timestamp" > deployments/sepolia/sepolia/Erc721Nft.deployment.json; \
+	echo "✅ Deployed Erc721Nft successfully!"; \
+	echo "Contract Address: $$contract_address"; \
+	echo "Transaction Hash: $$transaction_hash"; \
+	echo "Deployment saved to: deployments/sepolia/sepolia/Erc721Nft.deployment.json"; \
 	echo "$$output"
 
 # Declare and Deploy targets for MockTokenReceiver

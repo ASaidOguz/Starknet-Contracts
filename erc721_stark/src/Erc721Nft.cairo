@@ -77,9 +77,9 @@ use erc721_stark::components::Counter::CounterComponent;
     }
 
     #[constructor]
-    fn constructor(ref self:ContractState,owner:ContractAddress,name:ByteArray){
+    fn constructor(ref self:ContractState,owner:ContractAddress,name:ByteArray,symbol:ByteArray){
         let name :ByteArray =name;
-        let symbol: ByteArray ="ZKPOT";
+        let symbol: ByteArray =symbol;
         let base_uri:ByteArray = "https://ipfs.io/ipfs/";
 
         self.erc721.initializer(name, symbol, base_uri);

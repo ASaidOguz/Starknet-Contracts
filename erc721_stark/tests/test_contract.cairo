@@ -5,8 +5,11 @@ use snforge_std::{declare, ContractClassTrait, DeclareResultTrait};
 
 use erc721_stark::Erc721Nft::IErc721NftDispatcher;
 use erc721_stark::Erc721Nft::IErc721NftDispatcherTrait;
-use core::traits::TryInto;
 
+use erc721_stark::NftFactory::INftFactoryDispatcher;
+use erc721_stark::NftFactory::INftFactoryDispatcherTrait;
+use core::traits::TryInto;
+use core::array::{ArrayTrait};
 // ADD THESE IMPORTS for your counter reader dispatcher
 use erc721_stark::Erc721Nft::ICounterReaderDispatcher;
 use erc721_stark::Erc721Nft::ICounterReaderDispatcherTrait;
@@ -28,7 +31,7 @@ use openzeppelin_testing::declare_and_deploy;
 use openzeppelin_utils::serde::SerializedAppend;
 
 use snforge_std::{CheatSpan, cheat_caller_address};
-use starknet::ContractAddress;
+use starknet::{ContractAddress,ClassHash};
 
 // const 
 const ALICE: ContractAddress = 'ALICE'.try_into().unwrap();
@@ -38,17 +41,36 @@ const OWNER:ContractAddress= 'OWNER'.try_into().unwrap();
 // Declare and deploy the contract and return its dispatcher.
 fn deploy(owner:ContractAddress) -> IErc721NftDispatcher {
     let name:ByteArray="BestofBleach";
+    let symbol:ByteArray="BOB";
     let owner =OWNER;
     let mut calldata = array![];
     // need address of mock token and example external contract so lets deploy and extract their addresses
     calldata.append_serde(owner);
     calldata.append_serde(name);
+    calldata.append_serde(symbol);
     let contract_address= declare_and_deploy(
         "Erc721Nft",
         calldata,);
     // Return the dispatcher.
     // It allows to interact with the contract based on its interface.
     IErc721NftDispatcher { contract_address }
+}
+
+fn deploy_nft_factory(owner:ContractAddress) -> INftFactoryDispatcher {
+    // need to declare nft contract so our environment has the classHash of it.
+    let class_hash = declare("Erc721Nft").unwrap().contract_class().class_hash;
+    let class_hash_value = *class_hash;
+
+    let mut calldata = array![];
+    calldata.append_serde(owner);
+    calldata.append_serde(class_hash_value);
+
+    let contract_address = declare_and_deploy(
+        "NftFactory",
+        calldata,
+    );
+    // Return the dispatcher.
+    INftFactoryDispatcher { contract_address }
 }
 
 fn deploy_mock_contracts() -> (ContractAddress,ContractAddress) {
@@ -60,9 +82,56 @@ fn deploy_mock_contracts() -> (ContractAddress,ContractAddress) {
     let constructor_args_simple_contract = array![name];
     let (mock_token_receiver_address, _) = mock_token_receiver.deploy(@constructor_args_token_receiver).unwrap();
     let (mock_simple_contract_address, _) = mock_simple_contract.deploy(@constructor_args_simple_contract).unwrap();
-    println!("MockTokenReceiver deployed at: {:?}", mock_token_receiver_address);
-    println!("MockSimpleContract deployed at: {:?}", mock_simple_contract_address);
+
     return(mock_token_receiver_address,mock_simple_contract_address);
+}
+
+#[test]
+fn test_deploy_nftfactory(){
+    let nft_factory = deploy_nft_factory(OWNER);
+    println!("NftFactory deployed at: {:?}", nft_factory.contract_address);
+
+    let contract_name:ByteArray="Factory-Born";
+    let symbol:ByteArray="FB";
+    let deployed_nft_contract =nft_factory.deploy_nft_contract(contract_name.clone(), symbol.clone());
+    println!("Deployed NFT contract at: {:?}", deployed_nft_contract);
+    let ierc721metada:IERC721MetadataDispatcher =IERC721MetadataDispatcher{
+        contract_address: deployed_nft_contract,
+    };
+
+    let deployed_name = ierc721metada.name();
+    println!("Deployed NFT contract name: {:?}", deployed_name.clone());
+    assert_eq!(deployed_name, contract_name, "Deployed contract name does not match expected name");
+    
+    let deployed_symbol = ierc721metada.symbol();
+    println!("Deployed NFT contract symbol: {:?}", deployed_symbol.clone());
+    assert_eq!(deployed_symbol, symbol, "Deployed contract symbol does not match expected symbol");
+}
+
+#[test]
+fn test_nftfactory_deployed_contract(){
+    let nft_factory = deploy_nft_factory(OWNER);
+    let contract_name:ByteArray="Factory-Born";
+    let symbol:ByteArray="FB";
+    cheat_caller_address(nft_factory.contract_address, ALICE, CheatSpan::TargetCalls(3)); 
+    let deployed_nft_contract =nft_factory.deploy_nft_contract(contract_name.clone(), symbol.clone());
+    let _ =nft_factory.deploy_nft_contract(contract_name.clone(), symbol.clone());
+    let _ =nft_factory.deploy_nft_contract(contract_name.clone(), symbol.clone());
+    let nft_contract_dispatcher = IErc721NftDispatcher {
+        contract_address: deployed_nft_contract,
+    };
+    let ipfs_hash:ByteArray="QmVsC32PYDe1cM9zoA8JMninKjeFmHB4xRXi1As2vrv5or";
+    let nft_id=nft_contract_dispatcher.mint_item(ALICE,ipfs_hash );
+    // Check if the minting was successful
+    assert_eq!(nft_id, 1); 
+  
+    let nft_contracts=nft_factory.get_deployed_nfts_by_deployer(ALICE);
+    
+    for i in 0..nft_contracts.len() {
+    let contract = *nft_contracts.at(i);
+    println!("Deployed NFT contract address: {:?}", contract);
+                }
+    assert_eq!(nft_contracts.len(), 3, "Deployer should have one");
 }
 
 // Our Main Contract Erc721Nft
