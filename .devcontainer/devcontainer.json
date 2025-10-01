@@ -1,0 +1,13 @@
+{
+  "name": "Node.js on Ubuntu 24.04",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  "remoteUser": "root",
+  "forwardPorts": [5050],
+  "customizations": {
+    "vscode": {
+      "extensions": ["streetsidesoftware.code-spell-checker"]
+    }
+  }
+}
