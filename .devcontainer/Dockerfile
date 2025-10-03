@@ -19,15 +19,17 @@ RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.starkup.dev | sh \
 ENV PATH="/root/.starkup/bin:${PATH}"
 
 # 4. Install StarkNet Devnet + Node.js via asdf
-RUN asdf plugin add nodejs \
+RUN bash -c ". $ASDF_DIR/asdf.sh \
+    && asdf plugin add nodejs \
     && asdf plugin add starknet-devnet \
-    && echo "nodejs 20.5.1" >> ~/.tool-versions \
-    && echo "starknet-devnet 0.4.1" >> ~/.tool-versions \
-    && asdf install
+    && echo 'nodejs 20.5.1' >> ~/.tool-versions \
+    && echo 'starknet-devnet 0.4.1' >> ~/.tool-versions \
+    && asdf install"
 
 # 5. Verify installs
-RUN starknet --version || true \
+RUN bash -c ". $ASDF_DIR/asdf.sh \
+    && starknet --version || true \
     && starknet-devnet --version || true \
-    && node -v
+    && node -v"
 
 CMD ["bash"]
